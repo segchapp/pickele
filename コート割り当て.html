@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="コート割り当て">
+  <title>コート割り当て</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      background: #EEF2F7;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1565C0, #1E88E5);
+      color: white;
+      padding: 22px 20px 18px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      letter-spacing: 2px;
+    }
+
+    header span { font-size: 26px; vertical-align: middle; margin-right: 8px; }
+
+    .container {
+      padding: 20px 16px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .input-card {
+      background: white;
+      border-radius: 18px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+
+    .input-row + .input-row {
+      border-top: 1px solid #EEF2F7;
+    }
+
+    .label-wrap .label-main {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .label-wrap .label-sub {
+      font-size: 11px;
+      color: #AAA;
+      margin-top: 2px;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .step-btn {
+      width: 42px;
+      height: 42px;
+      border: none;
+      border-radius: 50%;
+      background: #1565C0;
+      color: white;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(21,101,192,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+
+    .step-btn:active { transform: scale(0.88); }
+
+    .step-btn.disabled {
+      background: #B0BEC5;
+      box-shadow: none;
+      pointer-events: none;
+    }
+
+    .step-val {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1565C0;
+      min-width: 52px;
+      text-align: center;
+    }
+
+    .shuffle-btn {
+      display: block;
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #E53935, #EF5350);
+      color: white;
+      border: none;
+      border-radius: 18px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(229,57,53,0.40);
+      margin-bottom: 22px;
+      letter-spacing: 3px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s;
+    }
+
+    .shuffle-btn:active { transform: scale(0.96); }
+
+    .results { display: none; }
+
+    .result-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #999;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .court-card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+      border-left: 6px solid;
+      animation: slideIn 0.3s ease both;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .court-card:nth-child(2) { animation-delay: 0.04s; }
+    .court-card:nth-child(3) { animation-delay: 0.08s; }
+    .court-card:nth-child(4) { animation-delay: 0.12s; }
+    .court-card:nth-child(5) { animation-delay: 0.16s; }
+    .court-card:nth-child(6) { animation-delay: 0.20s; }
+    .court-card:nth-child(7) { animation-delay: 0.24s; }
+
+    .court-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #666;
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.20);
+    }
+
+    /* コート色 */
+    .color-1 { background: linear-gradient(135deg,#1565C0,#42A5F5); border-color: #1565C0; }
+    .color-2 { background: linear-gradient(135deg,#2E7D32,#66BB6A); border-color: #2E7D32; }
+    .color-3 { background: linear-gradient(135deg,#E65100,#FFA726); border-color: #E65100; }
+    .color-4 { background: linear-gradient(135deg,#6A1B9A,#AB47BC); border-color: #6A1B9A; }
+    .color-5 { background: linear-gradient(135deg,#00838F,#26C6DA); border-color: #00838F; }
+    .color-6 { background: linear-gradient(135deg,#C62828,#EF5350); border-color: #C62828; }
+
+    .rest-card {
+      background: #ECEFF1;
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      animation: slideIn 0.3s ease both;
+      animation-delay: 0.28s;
+    }
+
+    .rest-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #90A4AE;
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    .rest-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #B0BEC5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    .warn-card {
+      background: #FFF8E1;
+      border: 1px solid #FFE082;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #795548;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header><span>🏸</span>コート割り当て</header>
+
+<div class="container">
+
+  <div class="input-card">
+    <div class="input-row">
+      <div class="label-wrap">
+        <div class="label-main">人　数</div>
+        <div class="label-sub">1 〜 30 人</div>
+      </div>
+      <div class="stepper">
+        <button class="step-btn" id="btnAm" onclick="change('A',-1)">−</button>
+        <div class="step-val" id="valA">9</div>
+        <button class="step-btn" id="btnAp" onclick="change('A',+1)">＋</button>
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="label-wrap">
+        <div class="label-main">コート数</div>
+        <div class="label-sub">1 〜 6 コート</div>
+      </div>
+      <div class="stepper">
+        <button class="step-btn" id="btnBm" onclick="change('B',-1)">−</button>
+        <div class="step-val" id="valB">2</div>
+        <button class="step-btn" id="btnBp" onclick="change('B',+1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="shuffle-btn" onclick="assign()">🔀 シャッフル !</button>
+
+  <div class="results" id="results"></div>
+
+</div>
+
+<script>
+  const MAX_A = 30;
+  const MAX_B = 6;
+  let A = 9, B = 2;
+
+  const COLORS = ['color-1','color-2','color-3','color-4','color-5','color-6'];
+
+  function updateUI() {
+    document.getElementById('valA').textContent = A;
+    document.getElementById('valB').textContent = B;
+    document.getElementById('btnAm').classList.toggle('disabled', A <= 1);
+    document.getElementById('btnAp').classList.toggle('disabled', A >= MAX_A);
+    document.getElementById('btnBm').classList.toggle('disabled', B <= 1);
+    document.getElementById('btnBp').classList.toggle('disabled', B >= MAX_B);
+  }
+
+  function change(key, delta) {
+    if (key === 'A') A = Math.min(MAX_A, Math.max(1, A + delta));
+    else             B = Math.min(MAX_B, Math.max(1, B + delta));
+    updateUI();
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function assign() {
+    const people = Array.from({length: A}, (_, i) => i + 1);
+    shuffle(people);
+
+    const courts = [];
+    for (let i = 0; i < B; i++) {
+      const group = people.slice(i * 4, (i + 1) * 4);
+      if (group.length === 4) courts.push(group);
+    }
+
+    const rest = people.slice(courts.length * 4);
+
+    let html = `<div class="result-title">▼ 割り当て結果</div>`;
+
+    if (courts.length === 0) {
+      html += `<div class="warn-card">⚠️ 4人揃うコートがありません<br>人数またはコート数を確認してください</div>`;
+    }
+
+    courts.forEach((court, idx) => {
+      const c = COLORS[idx];
+      html += `
+        <div class="court-card ${c}">
+          <div class="court-name">🏟 コート ${idx + 1}</div>
+          <div class="badges">
+            ${court.map(n => `<div class="badge ${c}">${n}</div>`).join('')}
+          </div>
+        </div>`;
+    });
+
+    if (rest.length > 0) {
+      html += `
+        <div class="rest-card">
+          <div class="rest-name">💤 お休み (${rest.length}人)</div>
+          <div class="badges">
+            ${rest.map(n => `<div class="rest-badge">${n}</div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    const el = document.getElementById('results');
+    el.innerHTML = html;
+    el.style.display = 'block';
+
+    setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  updateUI();
+</script>
+</body>
+</html>
