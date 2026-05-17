@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="コート割り当て">
+  <title>コート割り当て（公平版）</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      background: #EEF2F7;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1565C0, #1E88E5);
+      color: white;
+      padding: 22px 20px 18px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      letter-spacing: 2px;
+    }
+
+    header span { font-size: 26px; vertical-align: middle; margin-right: 8px; }
+
+    .round-info {
+      font-size: 12px;
+      letter-spacing: 1px;
+      margin-top: 6px;
+      opacity: 0.85;
+    }
+
+    .container {
+      padding: 20px 16px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .input-card {
+      background: white;
+      border-radius: 18px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+
+    .input-row + .input-row {
+      border-top: 1px solid #EEF2F7;
+    }
+
+    .label-wrap .label-main {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .label-wrap .label-sub {
+      font-size: 11px;
+      color: #AAA;
+      margin-top: 2px;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .step-btn {
+      width: 42px;
+      height: 42px;
+      border: none;
+      border-radius: 50%;
+      background: #1565C0;
+      color: white;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(21,101,192,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+
+    .step-btn:active { transform: scale(0.88); }
+
+    .step-btn.disabled {
+      background: #B0BEC5;
+      box-shadow: none;
+      pointer-events: none;
+    }
+
+    .step-val {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1565C0;
+      min-width: 52px;
+      text-align: center;
+    }
+
+    .shuffle-btn {
+      display: block;
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #E53935, #EF5350);
+      color: white;
+      border: none;
+      border-radius: 18px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(229,57,53,0.40);
+      margin-bottom: 12px;
+      letter-spacing: 3px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s;
+    }
+
+    .shuffle-btn:active { transform: scale(0.96); }
+
+    .tools-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tool-btn {
+      flex: 1;
+      padding: 10px;
+      background: white;
+      color: #455A64;
+      border: 1px solid #CFD8DC;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+
+    .tool-btn:active { transform: scale(0.96); background: #ECEFF1; }
+
+    .results { display: none; }
+
+    .result-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #999;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .court-card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+      border-left: 6px solid;
+      animation: slideIn 0.3s ease both;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .court-card:nth-child(2) { animation-delay: 0.04s; }
+    .court-card:nth-child(3) { animation-delay: 0.08s; }
+    .court-card:nth-child(4) { animation-delay: 0.12s; }
+    .court-card:nth-child(5) { animation-delay: 0.16s; }
+    .court-card:nth-child(6) { animation-delay: 0.20s; }
+    .court-card:nth-child(7) { animation-delay: 0.24s; }
+
+    .court-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #666;
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.20);
+    }
+
+    /* コート色 */
+    .color-1 { background: linear-gradient(135deg,#1565C0,#42A5F5); border-color: #1565C0; }
+    .color-2 { background: linear-gradient(135deg,#2E7D32,#66BB6A); border-color: #2E7D32; }
+    .color-3 { background: linear-gradient(135deg,#E65100,#FFA726); border-color: #E65100; }
+    .color-4 { background: linear-gradient(135deg,#6A1B9A,#AB47BC); border-color: #6A1B9A; }
+    .color-5 { background: linear-gradient(135deg,#00838F,#26C6DA); border-color: #00838F; }
+    .color-6 { background: linear-gradient(135deg,#C62828,#EF5350); border-color: #C62828; }
+
+    .rest-card {
+      background: #ECEFF1;
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      animation: slideIn 0.3s ease both;
+      animation-delay: 0.28s;
+    }
+
+    .rest-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #90A4AE;
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    .rest-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #B0BEC5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    .warn-card {
+      background: #FFF8E1;
+      border: 1px solid #FFE082;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #795548;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .stats-card {
+      background: white;
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      font-size: 13px;
+      color: #455A64;
+    }
+
+    .stats-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #607D8B;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .stat-pill {
+      background: #ECEFF1;
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #455A64;
+    }
+
+    .stat-pill .num {
+      color: #1565C0;
+      margin-right: 4px;
+    }
+
+    .stat-pill.high { background: #FFEBEE; color: #C62828; }
+    .stat-pill.high .num { color: #C62828; }
+
+    .quality-row {
+      font-size: 11px;
+      color: #90A4AE;
+      text-align: center;
+      margin-top: -4px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div><span>🏸</span>コート割り当て</div>
+  <div class="round-info" id="roundInfo">公平モード（履歴記録中）</div>
+</header>
+
+<div class="container">
+
+  <div class="input-card">
+    <div class="input-row">
+      <div class="label-wrap">
+        <div class="label-main">人　数</div>
+        <div class="label-sub">1 〜 30 人</div>
+      </div>
+      <div class="stepper">
+        <button class="step-btn" id="btnAm" onclick="change('A',-1)">−</button>
+        <div class="step-val" id="valA">9</div>
+        <button class="step-btn" id="btnAp" onclick="change('A',+1)">＋</button>
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="label-wrap">
+        <div class="label-main">コート数</div>
+        <div class="label-sub">1 〜 6 コート</div>
+      </div>
+      <div class="stepper">
+        <button class="step-btn" id="btnBm" onclick="change('B',-1)">−</button>
+        <div class="step-val" id="valB">2</div>
+        <button class="step-btn" id="btnBp" onclick="change('B',+1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="shuffle-btn" onclick="assign()">🔀 シャッフル !</button>
+
+  <div class="tools-row">
+    <button class="tool-btn" onclick="toggleStats()">📊 履歴</button>
+    <button class="tool-btn" onclick="resetHistory()">🔄 リセット</button>
+  </div>
+
+  <div class="results" id="results"></div>
+
+</div>
+
+<script>
+  const MAX_A = 30;
+  const MAX_B = 6;
+  let A = 9, B = 2;
+
+  const COLORS = ['color-1','color-2','color-3','color-4','color-5','color-6'];
+  const STORAGE_KEY = 'court_assign_state_v2';
+
+  // 履歴データ
+  let pairCount = {};   // "i-j" (i<j) -> 一緒にプレイした回数
+  let restCount = {};   // i -> 休んだ回数
+  let playCount = {};   // i -> プレイした回数
+  let roundCount = 0;
+  let statsVisible = false;
+
+  // ---- localStorage ----
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        pairCount = data.pairCount || {};
+        restCount = data.restCount || {};
+        playCount = data.playCount || {};
+        roundCount = data.roundCount || 0;
+        if (typeof data.A === 'number') A = data.A;
+        if (typeof data.B === 'number') B = data.B;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        pairCount, restCount, playCount, roundCount, A, B
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  // ---- 基本UI ----
+  function updateUI() {
+    document.getElementById('valA').textContent = A;
+    document.getElementById('valB').textContent = B;
+    document.getElementById('btnAm').classList.toggle('disabled', A <= 1);
+    document.getElementById('btnAp').classList.toggle('disabled', A >= MAX_A);
+    document.getElementById('btnBm').classList.toggle('disabled', B <= 1);
+    document.getElementById('btnBp').classList.toggle('disabled', B >= MAX_B);
+    document.getElementById('roundInfo').textContent =
+      `公平モード（${roundCount} ラウンド記録）`;
+  }
+
+  function change(key, delta) {
+    if (key === 'A') A = Math.min(MAX_A, Math.max(1, A + delta));
+    else             B = Math.min(MAX_B, Math.max(1, B + delta));
+    saveState();
+    updateUI();
+  }
+
+  // ---- ユーティリティ ----
+  function pairKey(i, j) {
+    return i < j ? `${i}-${j}` : `${j}-${i}`;
+  }
+  function getPairCount(i, j) { return pairCount[pairKey(i,j)] || 0; }
+  function getRest(i) { return restCount[i] || 0; }
+  function getPlay(i) { return playCount[i] || 0; }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // コート割当の総コスト（同じペアが何回再共演しているかの合計）
+  function groupCost(courts) {
+    let cost = 0;
+    for (const court of courts) {
+      for (let i = 0; i < court.length; i++) {
+        for (let j = i + 1; j < court.length; j++) {
+          // 過去の共演回数を二乗で重みづけ（繰り返しに大きなペナルティ）
+          const c = getPairCount(court[i], court[j]);
+          cost += c * c + c;
+        }
+      }
+    }
+    return cost;
+  }
+
+  // ---- 公平シャッフル ----
+  function assign() {
+    const allPeople = Array.from({length: A}, (_, i) => i + 1);
+    const numCourts = Math.min(B, Math.floor(A / 4));
+    const numResters = A - numCourts * 4;
+
+    // --- 休み選び：休んだ回数の少ない人を優先して休ませる（追いつき補正） ---
+    // 同点はランダムで決定
+    const withScore = allPeople.map(p => ({
+      id: p,
+      rest: getRest(p),
+      rand: Math.random()
+    }));
+    withScore.sort((a, b) => a.rest - b.rest || a.rand - b.rand);
+    const resters = withScore.slice(0, numResters).map(p => p.id);
+    const players = withScore.slice(numResters).map(p => p.id);
+
+    // --- コート構成：過去のペア履歴を考慮して何回もランダムを試し最良を選ぶ ---
+    let bestCourts = null, bestCost = Infinity;
+    const ATTEMPTS = 500;
+    for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+      const shuffled = shuffle([...players]);
+      const courts = [];
+      for (let i = 0; i < numCourts; i++) {
+        courts.push(shuffled.slice(i * 4, (i + 1) * 4));
+      }
+      const cost = groupCost(courts);
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestCourts = courts;
+        if (cost === 0) break; // これ以上は良くならない
+      }
+    }
+
+    // --- 状態を更新 ---
+    for (const r of resters) {
+      restCount[r] = getRest(r) + 1;
+    }
+    if (bestCourts) {
+      for (const court of bestCourts) {
+        for (const p of court) playCount[p] = getPlay(p) + 1;
+        for (let i = 0; i < court.length; i++) {
+          for (let j = i + 1; j < court.length; j++) {
+            const key = pairKey(court[i], court[j]);
+            pairCount[key] = (pairCount[key] || 0) + 1;
+          }
+        }
+      }
+    }
+    roundCount++;
+    saveState();
+    updateUI();
+
+    render(bestCourts || [], resters, bestCost);
+  }
+
+  // ---- 表示 ----
+  function render(courts, resters, cost) {
+    let html = `<div class="result-title">▼ 割り当て結果（ラウンド ${roundCount}）</div>`;
+
+    if (courts.length === 0) {
+      html += `<div class="warn-card">⚠️ 4人揃うコートがありません<br>人数またはコート数を確認してください</div>`;
+    }
+
+    courts.forEach((court, idx) => {
+      const c = COLORS[idx];
+      html += `
+        <div class="court-card ${c}">
+          <div class="court-name">🏟 コート ${idx + 1}</div>
+          <div class="badges">
+            ${court.map(n => `<div class="badge ${c}">${n}</div>`).join('')}
+          </div>
+        </div>`;
+    });
+
+    if (resters.length > 0) {
+      html += `
+        <div class="rest-card">
+          <div class="rest-name">💤 お休み (${resters.length}人)</div>
+          <div class="badges">
+            ${resters.map(n => `<div class="rest-badge">${n}</div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    if (courts.length > 0) {
+      html += `<div class="quality-row">公平度コスト: ${cost}（小さいほど良い）</div>`;
+    }
+
+    if (statsVisible) html += renderStats();
+
+    const el = document.getElementById('results');
+    el.innerHTML = html;
+    el.style.display = 'block';
+
+    setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  function renderStats() {
+    const people = Array.from({length: A}, (_, i) => i + 1);
+    const maxRest = Math.max(0, ...people.map(getRest));
+
+    // 休み回数
+    let restHtml = people.map(p => {
+      const r = getRest(p);
+      const cls = (r === maxRest && maxRest > 0) ? 'stat-pill high' : 'stat-pill';
+      return `<span class="${cls}"><span class="num">${p}</span>:${r}回</span>`;
+    }).join('');
+
+    // プレイ回数
+    let playHtml = people.map(p => {
+      return `<span class="stat-pill"><span class="num">${p}</span>:${getPlay(p)}回</span>`;
+    }).join('');
+
+    // 多くペアになったTop5
+    const pairs = Object.entries(pairCount)
+      .filter(([k, v]) => {
+        const [a, b] = k.split('-').map(Number);
+        return a <= A && b <= A;
+      })
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    let pairHtml = pairs.length
+      ? pairs.map(([k, v]) => `<span class="stat-pill"><span class="num">${k.replace('-', '＆')}</span>:${v}回</span>`).join('')
+      : '<span style="color:#90A4AE;font-size:12px;">まだ記録なし</span>';
+
+    return `
+      <div class="stats-card">
+        <div class="stats-title">💤 休んだ回数</div>
+        <div class="stats-row">${restHtml}</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-title">🎾 プレイ回数</div>
+        <div class="stats-row">${playHtml}</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-title">👥 よく組んだペア Top5</div>
+        <div class="stats-row">${pairHtml}</div>
+      </div>
+    `;
+  }
+
+  function toggleStats() {
+    statsVisible = !statsVisible;
+    // 結果が既に表示されていれば再描画
+    const el = document.getElementById('results');
+    if (el.style.display === 'block') {
+      // 最後の結果が無いので簡易再描画：履歴のみ表示
+      if (!statsVisible) {
+        // 結果は維持して履歴部分のみ削除するため、再アサインなしで再描画
+        // ここでは簡略化して、結果はそのままで履歴のみ表示/非表示切替の場合は
+        // 履歴部分を末尾に追加/削除する
+      }
+    }
+    // 履歴単独表示
+    if (statsVisible) {
+      const target = document.getElementById('results');
+      target.style.display = 'block';
+      // 既存の結果の末尾に履歴が無ければ追加
+      if (!target.innerHTML.includes('stats-card')) {
+        target.innerHTML += renderStats();
+      }
+    } else {
+      // 履歴のカードのみ消す
+      const target = document.getElementById('results');
+      target.querySelectorAll('.stats-card').forEach(n => n.remove());
+      if (!target.innerHTML.trim()) target.style.display = 'none';
+    }
+  }
+
+  function resetHistory() {
+    if (!confirm('履歴をリセットしますか？\n（ペア・休み・プレイ回数の記録が消えます）')) return;
+    pairCount = {};
+    restCount = {};
+    playCount = {};
+    roundCount = 0;
+    saveState();
+    updateUI();
+    const el = document.getElementById('results');
+    el.innerHTML = '';
+    el.style.display = 'none';
+    alert('履歴をリセットしました');
+  }
+
+  loadState();
+  updateUI();
+</script>
+</body>
+</html>
