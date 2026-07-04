@@ -696,4 +696,14 @@
     roundCount = 0;
     saveState();
     updateUI();
-    const el = document.
+    const el = document.getElementById('results');
+    el.innerHTML = '';
+    el.style.display = 'none';
+    alert('履歴をリセットしました');
+  }
+
+  loadState();
+  updateUI();
+</script>
+</body>
+</html>
