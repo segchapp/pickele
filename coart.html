@@ -639,7 +639,7 @@
         <div class="court-card ${c}">
           <div class="court-name"><span>コート</span><span>${idx + 1}</span></div>
           <div class="badges">
-            ${court.map(n => `<div class="badge ${c}">${n}</div>`).join('')}
+            ${[...court].sort((a, b) => a - b).map(n => `<div class="badge ${c}">${n}</div>`).join('')}
           </div>
         </div>`;
     });
@@ -649,7 +649,7 @@
         <div class="rest-card">
           <div class="rest-name">💤 お休み (${resters.length}人)</div>
           <div class="badges">
-            ${resters.map(n => `<div class="rest-badge">${n}</div>`).join('')}
+            ${[...resters].sort((a, b) => a - b).map(n => `<div class="rest-badge">${n}</div>`).join('')}
           </div>
         </div>`;
     }
