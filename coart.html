@@ -171,9 +171,12 @@
 
     .court-card {
       background: white;
-      border-radius: 18px;
-      padding: 18px 20px;
-      margin-bottom: 12px;
+      border-radius: 16px;
+      padding: 8px 6px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.10);
       border-left: 6px solid;
       animation: slideIn 0.3s ease both;
@@ -195,10 +198,14 @@
       font-size: 18px;
       font-weight: 700;
       color: #FFFFFF;
-      margin-bottom: 14px;
-      letter-spacing: 1px;
       text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+      flex: 0 0 auto;
+      width: 3.2em;
+      line-height: 1.2;
+      text-align: center;
     }
+
+    .court-name span { display: block; }
 
     .badges {
       display: flex;
@@ -207,13 +214,16 @@
     }
 
     /* 1コート最大4人：表示幅いっぱいに均等配置 */
-    .court-card .badges { flex-wrap: nowrap; }
+    .court-card .badges { flex: 1; min-width: 0; flex-wrap: nowrap; gap: 4px; }
 
+    /* 縦幅を抑えるため、丸ではなく横長の角丸にする（文字サイズは同じ） */
     .court-card .badge {
       flex: 1 1 0;
       min-width: 0;
-      aspect-ratio: 1 / 1;
-      height: auto;
+      height: 1.3em;
+      line-height: 1;
+      border-radius: 999px;
+      letter-spacing: -0.04em;
     }
 
     .badge {
@@ -240,9 +250,9 @@
 
     .rest-card {
       background: #ECEFF1;
-      border-radius: 18px;
-      padding: 18px 20px;
-      margin-bottom: 12px;
+      border-radius: 16px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.06);
       animation: slideIn 0.3s ease both;
       animation-delay: 0.28s;
@@ -252,15 +262,15 @@
       font-size: 18px;
       font-weight: 700;
       color: #000000;
-      margin-bottom: 14px;
+      margin-bottom: 6px;
       letter-spacing: 1px;
     }
 
     .rest-badge {
       width: calc((100% - 30px) / 4);
-      aspect-ratio: 1 / 1;
-      height: auto;
-      border-radius: 50%;
+      height: 1.3em;
+      line-height: 1;
+      border-radius: 999px;
       background: #B0BEC5;
       display: flex;
       align-items: center;
@@ -548,20 +558,44 @@
     const resters = withScore.slice(0, numResters).map(p => p.id);
     const players = withScore.slice(numResters).map(p => p.id);
 
-    // 4人組み構成＋コート割当 を多数試行
+    // 4人組み構成：ランダム初期配置 → コート間で1人ずつ入れ替える局所探索
+    // 「同じ人との再会」を最優先し、同点の場合のみコート番号の偏りで選ぶ
     let bestCourts = null, bestCost = Infinity;
-    const ATTEMPTS = 500;
-    for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    let bestP = Infinity, bestC = Infinity;
+    const RESTARTS = 40;
+    for (let attempt = 0; attempt < RESTARTS; attempt++) {
       const sh = shuffle([...players]);
       const groups = [];
       for (let i = 0; i < numCourts; i++) groups.push(sh.slice(i * 4, (i + 1) * 4));
 
-      const pCost = pairCostOfGroups(groups);
-      const { perm, cost: cCost } = bestCourtPermutation(groups);
-      const totalCost = pCost + cCost;
+      let improved = true;
+      while (improved) {
+        improved = false;
+        for (let a = 0; a < numCourts; a++) {
+          for (let b = a + 1; b < numCourts; b++) {
+            for (let x = 0; x < 4; x++) {
+              for (let y = 0; y < 4; y++) {
+                const before = pairCostOfGroups([groups[a], groups[b]]);
+                [groups[a][x], groups[b][y]] = [groups[b][y], groups[a][x]];
+                const after = pairCostOfGroups([groups[a], groups[b]]);
+                if (after < before) {
+                  improved = true;
+                } else {
+                  [groups[a][x], groups[b][y]] = [groups[b][y], groups[a][x]];
+                }
+              }
+            }
+          }
+        }
+      }
 
-      if (totalCost < bestCost) {
-        bestCost = totalCost;
+      const pCost = pairCostOfGroups(groups);
+      if (pCost > bestP) continue;
+      const { perm, cost: cCost } = bestCourtPermutation(groups);
+      if (pCost < bestP || cCost < bestC) {
+        bestP = pCost;
+        bestC = cCost;
+        bestCost = pCost + cCost;
         bestCourts = perm.map(i => groups[i]);
         if (bestCost === 0) break;
       }
@@ -603,7 +637,7 @@
       const c = COLORS[idx];
       html += `
         <div class="court-card ${c}">
-          <div class="court-name">🏟 コート ${idx + 1}</div>
+          <div class="court-name"><span>コート</span><span>${idx + 1}</span></div>
           <div class="badges">
             ${court.map(n => `<div class="badge ${c}">${n}</div>`).join('')}
           </div>
