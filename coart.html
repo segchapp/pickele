@@ -116,6 +116,83 @@
       text-align: center;
     }
 
+    /* お休み指定 */
+    .fixed-card {
+      background: white;
+      border-radius: 18px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    }
+
+    .fixed-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .fixed-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .fixed-title small {
+      font-size: 12px;
+      font-weight: 400;
+      color: #999;
+      margin-left: 6px;
+    }
+
+    .fixed-clear {
+      padding: 6px 12px;
+      background: white;
+      color: #455A64;
+      border: 1px solid #CFD8DC;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .fixed-inputs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .fixed-input {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 52px;
+      border: 2px solid #CFD8DC;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 26px;   /* 16px以上でiPhoneの自動ズームを防止 */
+      font-weight: 800;
+      color: #546E7A;
+      background: #F7F9FB;
+      -moz-appearance: textfield;
+    }
+
+    .fixed-input::-webkit-outer-spin-button,
+    .fixed-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .fixed-input:focus { outline: none; border-color: #1565C0; background: white; }
+
+    .fixed-input.filled { border-color: #78909C; background: #ECEFF1; }
+
+    .fixed-input.invalid { border-color: #E53935; background: #FFEBEE; color: #C62828; }
+
+    .fixed-msg {
+      font-size: 12px;
+      color: #C62828;
+      margin-top: 6px;
+      min-height: 1em;
+      text-align: center;
+    }
+
     .shuffle-btn {
       display: block;
       width: 100%;
@@ -282,6 +359,8 @@
       border: 2px solid rgba(255,255,255,0.55);
     }
 
+    .rest-badge.fixed { background: #607D8B; }
+
     .warn-card {
       background: #FFF8E1;
       border: 1px solid #FFE082;
@@ -396,6 +475,20 @@
     </div>
   </div>
 
+  <div class="fixed-card">
+    <div class="fixed-head">
+      <div class="fixed-title">💤 お休み指定<small>0〜4人・番号で入力</small></div>
+      <button class="fixed-clear" onclick="clearFixed()">✕ クリア</button>
+    </div>
+    <div class="fixed-inputs">
+      <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+      <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+      <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+      <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+    </div>
+    <div class="fixed-msg" id="fixedMsg"></div>
+  </div>
+
   <button class="shuffle-btn" onclick="assign()">🔀 シャッフル !</button>
 
   <div class="tools-row">
@@ -436,16 +529,63 @@
         roundCount = data.roundCount || 0;
         if (typeof data.A === 'number') A = data.A;
         if (typeof data.B === 'number') B = data.B;
+        if (Array.isArray(data.fixedRaw)) {
+          const inputs = getFixedInputs();
+          data.fixedRaw.slice(0, 4).forEach((v, i) => { inputs[i].value = v; });
+        }
       }
     } catch (e) { /* ignore */ }
   }
 
   function saveState() {
     try {
+      const fixedRaw = getFixedInputs().map(el => el.value);
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        pairCount, restCount, playCount, courtCount, roundCount, A, B
+        pairCount, restCount, playCount, courtCount, roundCount, A, B, fixedRaw
       }));
     } catch (e) { /* ignore */ }
+  }
+
+  // ---- お休み指定 ----
+  function getFixedInputs() {
+    return Array.from(document.querySelectorAll('.fixed-input'));
+  }
+
+  // 入力欄を検査し、有効な指定番号の配列を返す（範囲外・重複は除外して赤表示）
+  function readFixedResters() {
+    const seen = new Set();
+    const valid = [];
+    const msgs = [];
+    for (const el of getFixedInputs()) {
+      el.classList.remove('filled', 'invalid');
+      const raw = el.value.trim();
+      if (raw === '') continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1 || n > A) {
+        el.classList.add('invalid');
+        msgs.push(`${raw} は 1〜${A} の範囲外です`);
+      } else if (seen.has(n)) {
+        el.classList.add('invalid');
+        msgs.push(`${n} が重複しています`);
+      } else {
+        seen.add(n);
+        valid.push(n);
+        el.classList.add('filled');
+      }
+    }
+    document.getElementById('fixedMsg').textContent = msgs.join(' / ');
+    return valid;
+  }
+
+  function onFixedInput() {
+    readFixedResters();
+    saveState();
+  }
+
+  function clearFixed() {
+    getFixedInputs().forEach(el => { el.value = ''; });
+    readFixedResters();
+    saveState();
   }
 
   // ---- UI ----
@@ -463,6 +603,7 @@
     else             B = Math.min(MAX_B, Math.max(1, B + delta));
     saveState();
     updateUI();
+    readFixedResters();
   }
 
   // ---- ユーティリティ ----
@@ -544,18 +685,27 @@
 
   // ---- 公平シャッフル ----
   function assign() {
+    const fixedResters = readFixedResters();
+    if (document.querySelector('.fixed-input.invalid')) {
+      if (!confirm('お休み指定に無効な番号があります。\n無効な番号を無視してシャッフルしますか？')) return;
+    }
+    const fixedSet = new Set(fixedResters);
+
+    // 指定休みの人を除いた残りでコート数・追加の休み人数を決める
     const allPeople = Array.from({length: A}, (_, i) => i + 1);
-    const numCourts = Math.min(B, Math.floor(A / 4));
-    const numResters = A - numCourts * 4;
+    const available = allPeople.filter(p => !fixedSet.has(p));
+    const numCourts = Math.min(B, Math.floor(available.length / 4));
+    const numResters = available.length - numCourts * 4;
 
     // 休み選び：休んだ回数の少ない人を優先（追いつき補正）
-    const withScore = allPeople.map(p => ({
+    const withScore = available.map(p => ({
       id: p,
       rest: getRest(p),
       rand: Math.random()
     }));
     withScore.sort((a, b) => a.rest - b.rest || a.rand - b.rand);
-    const resters = withScore.slice(0, numResters).map(p => p.id);
+    const autoResters = withScore.slice(0, numResters).map(p => p.id);
+    const resters = fixedResters.concat(autoResters);
     const players = withScore.slice(numResters).map(p => p.id);
 
     // 4人組み構成：ランダム初期配置 → コート間で1人ずつ入れ替える局所探索
@@ -622,11 +772,11 @@
     saveState();
     updateUI();
 
-    render(bestCourts || [], resters, bestCost);
+    render(bestCourts || [], resters, bestCost, fixedSet);
   }
 
   // ---- 表示 ----
-  function render(courts, resters, cost) {
+  function render(courts, resters, cost, fixedSet = new Set()) {
     let html = `<div class="result-title">▼ 割り当て結果</div>`;
 
     if (courts.length === 0) {
@@ -649,7 +799,7 @@
         <div class="rest-card">
           <div class="rest-name">💤 お休み (${resters.length}人)</div>
           <div class="badges">
-            ${[...resters].sort((a, b) => a - b).map(n => `<div class="rest-badge">${n}</div>`).join('')}
+            ${[...resters].sort((a, b) => a - b).map(n => `<div class="rest-badge${fixedSet.has(n) ? ' fixed' : ''}">${n}</div>`).join('')}
           </div>
         </div>`;
     }
@@ -738,6 +888,7 @@
 
   loadState();
   updateUI();
+  readFixedResters();
 </script>
 </body>
 </html>
