@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="諏訪ピックルボール参加者">
+  <title>諏訪ピックルボール参加者</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      background: #EEF2F7;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1565C0, #1E88E5);
+      color: white;
+      padding: 18px 8px 14px;
+      text-align: center;
+      font-size: clamp(18px, 6.4vw, 32px);
+      font-weight: bold;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    header span { font-size: 1.1em; vertical-align: middle; margin-right: 6px; }
+
+    .count {
+      font-size: 15px;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      opacity: 0.9;
+    }
+
+    .count b { font-size: 22px; margin: 0 2px; }
+
+    .container {
+      padding: 14px 12px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ---- 入力 ---- */
+    .input-card {
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    }
+
+    .input-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .input-sub {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      border: 2px solid #CFD8DC;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 17px;   /* 16px以上でiPhoneの自動ズームを防止 */
+      line-height: 1.5;
+      background: #F7F9FB;
+      resize: vertical;
+    }
+
+    textarea:focus { outline: none; border-color: #1565C0; background: white; }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .main-btn {
+      flex: 2;
+      padding: 14px;
+      background: linear-gradient(135deg, #E53935, #EF5350);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(229,57,53,0.35);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s;
+    }
+
+    .main-btn:active { transform: scale(0.96); }
+
+    .tool-btn {
+      flex: 1;
+      padding: 10px;
+      background: white;
+      color: #455A64;
+      border: 1px solid #CFD8DC;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+
+    .tool-btn:active { transform: scale(0.96); background: #ECEFF1; }
+
+    /* ---- 一覧上部のツール ---- */
+    .tools-row {
+      display: none;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tools-row.show { display: flex; }
+
+    .tools-row .tool-btn { font-size: 15px; padding: 9px 4px; }
+
+    a.tool-btn { text-decoration: none; text-align: center; }
+
+    /* ---- 一覧（2列・縦方向に番号順） ---- */
+    .list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-flow: column;
+      gap: 6px;
+    }
+
+    .item {
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px 6px 6px;
+      min-width: 0;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.10);
+      animation: slideIn 0.25s ease both;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .num {
+      flex: 0 0 auto;
+      width: 1.9em;
+      height: 1.5em;
+      border-radius: 999px;
+      background: var(--numBg, linear-gradient(135deg, #1565C0, #42A5F5));
+      color: white;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.04em;
+      font-size: var(--fs);
+    }
+
+    .name {
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+      color: #263238;
+      white-space: nowrap;
+      overflow: hidden;
+      font-size: var(--fs);
+      line-height: 1.3;
+    }
+
+
+    .note {
+      font-size: 12px;
+      color: #795548;
+      background: #FFF8E1;
+      border: 1px solid #FFE082;
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .empty {
+      text-align: center;
+      color: #90A4AE;
+      font-size: 14px;
+      padding: 30px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🏓</span>諏訪ピックルボール参加者
+  <div class="count" id="count">参加 <b>0</b> 人</div>
+</header>
+
+<div class="container">
+
+  <div class="input-card" id="inputCard">
+    <div class="input-title">✏️ 参加者の氏名</div>
+    <div class="input-sub">1行に1人ずつ貼り付けてください（空行は無視されます）</div>
+    <textarea id="names" placeholder="例）&#10;諏訪太郎&#10;岡谷花子&#10;茅野次郎"></textarea>
+    <div class="btn-row">
+      <button class="tool-btn" onclick="clearNames()">✕ クリア</button>
+      <button class="main-btn" onclick="showList()">📋 表示</button>
+    </div>
+  </div>
+
+  <div class="tools-row" id="toolsRow">
+    <button class="tool-btn" onclick="editNames()">✏️ 編集</button>
+    <button class="tool-btn" onclick="changeSize(-1)">A−</button>
+    <button class="tool-btn" onclick="changeSize(+1)">A＋</button>
+    <a class="tool-btn" href="coart.html">🏸 コート</a>
+  </div>
+
+  <div id="note"></div>
+  <div class="list" id="list"></div>
+
+</div>
+
+<script>
+  const STORAGE_KEY = 'pickle_members_v1';
+  const SIZES = [16, 18, 20, 23, 26, 30];
+  let sizeIdx = 2;
+  let names = [];
+
+  // 番号の色（表示ボタンを押すたびにランダムで1色を選び、全員同じ色にする）
+  const NUM_COLORS = [
+    'linear-gradient(135deg,#1565C0,#42A5F5)', // 青
+    'linear-gradient(135deg,#2E7D32,#66BB6A)', // 緑
+    'linear-gradient(135deg,#E65100,#FFA726)', // オレンジ
+    'linear-gradient(135deg,#6A1B9A,#AB47BC)', // 紫
+    'linear-gradient(135deg,#00838F,#26C6DA)', // 水色
+    'linear-gradient(135deg,#C62828,#EF5350)', // 赤
+    'linear-gradient(135deg,#4E342E,#8D6E63)', // 茶
+    'linear-gradient(135deg,#283593,#7986CB)', // 紺
+    'linear-gradient(135deg,#AD1457,#EC407A)', // ピンク
+  ];
+  let colorIdx = -1;
+
+  function pickColor() {
+    let next;
+    do { next = Math.floor(Math.random() * NUM_COLORS.length); }
+    while (next === colorIdx && NUM_COLORS.length > 1);   // 前回と同じ色は避ける
+    colorIdx = next;
+    document.getElementById('list').style.setProperty('--numBg', NUM_COLORS[colorIdx]);
+  }
+
+  // ---- 保存・読込 ----
+  function save(text) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ text, sizeIdx }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (typeof data.sizeIdx === 'number') sizeIdx = Math.min(SIZES.length - 1, Math.max(0, data.sizeIdx));
+      return typeof data.text === 'string' ? data.text : null;
+    } catch (e) { return null; }
+  }
+
+  // ---- 氏名の取り出し ----
+  // 改行(CRLF/LF)で区切り、前後の空白（全角含む）を除去、空行を除外。
+  // 行頭の「1.」「1)」「①」「・」などの番号・記号も取り除く。
+  function parseNames(text) {
+    return text
+      .split(/\r\n|\r|\n/)
+      .map(s => s.replace(/^[\s　]+|[\s　]+$/g, ''))
+      .map(s => s.replace(/^(?:[0-9０-９]+[.．、,，)）:：]?|[①-⑳]|[・･\-－*＊●○■□◆◇])[\s　]*/, ''))
+      .filter(s => s.length > 0);
+  }
+
+  // ---- 表示 ----
+  function showList() {
+    const text = document.getElementById('names').value;
+    names = parseNames(text);
+    save(text);
+    pickColor();
+    render();
+    if (names.length > 0) {
+      document.getElementById('inputCard').style.display = 'none';
+      document.getElementById('toolsRow').classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function render() {
+    document.getElementById('count').innerHTML = `参加 <b>${names.length}</b> 人`;
+    const list = document.getElementById('list');
+    const note = document.getElementById('note');
+
+    if (names.length === 0) {
+      list.innerHTML = '';
+      note.innerHTML = '';
+      return;
+    }
+
+    // 縦方向に番号順（左列 1〜, 右列 続き）
+    const rows = Math.ceil(names.length / 2);
+    list.style.gridTemplateRows = `repeat(${rows}, auto)`;
+    list.style.setProperty('--fs', SIZES[sizeIdx] + 'px');
+
+    list.innerHTML = names.map((n, i) => `
+      <div class="item" style="animation-delay:${Math.min(i, 30) * 0.015}s">
+        <div class="num">${i + 1}</div>
+        <div class="name">${escapeHtml(n)}</div>
+      </div>`).join('');
+
+    // 同名チェックと人数上限の注意
+    const msgs = [];
+    const dup = names.filter((n, i) => names.indexOf(n) !== i);
+    if (dup.length) msgs.push(`同じ名前があります：${[...new Set(dup)].map(escapeHtml).join('、')}`);
+    if (names.length > 30) msgs.push('コート割りアプリは30人までです');
+    note.innerHTML = msgs.length ? `<div class="note">⚠️ ${msgs.join('<br>')}</div>` : '';
+
+    requestAnimationFrame(fitNames);
+  }
+
+  // 長い名前は枠に収まるよう文字を縮小
+  function fitNames() {
+    const base = SIZES[sizeIdx];
+    document.querySelectorAll('.name').forEach(el => {
+      el.style.fontSize = '';
+      el.style.whiteSpace = '';
+      let fs = base;
+      const minFs = Math.max(13, Math.round(base * 0.6));
+      while (el.scrollWidth > el.clientWidth && fs > minFs) {
+        fs -= 1;
+        el.style.fontSize = fs + 'px';
+      }
+      // それでも入らない長い名前は2行に折り返す
+      if (el.scrollWidth > el.clientWidth) {
+        el.style.whiteSpace = 'normal';
+        el.style.wordBreak = 'break-all';
+      }
+    });
+  }
+
+  function editNames() {
+    document.getElementById('inputCard').style.display = 'block';
+    document.getElementById('toolsRow').classList.remove('show');
+    document.getElementById('names').focus();
+  }
+
+  function clearNames() {
+    if (document.getElementById('names').value && !confirm('入力した氏名を消しますか？')) return;
+    document.getElementById('names').value = '';
+    names = [];
+    save('');
+    render();
+  }
+
+  function changeSize(d) {
+    sizeIdx = Math.min(SIZES.length - 1, Math.max(0, sizeIdx + d));
+    save(document.getElementById('names').value);
+    render();
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  window.addEventListener('resize', () => requestAnimationFrame(fitNames));
+
+  // 起動時：前回の一覧があればそのまま表示
+  const saved = load();
+  if (saved) {
+    document.getElementById('names').value = saved;
+    showList();
+  }
+</script>
+</body>
+</html>
