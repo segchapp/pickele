@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="諏訪ピックルボール会費">
+  <title>諏訪ピックルボール会費</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      background: #EEF2F7;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1565C0, #1E88E5);
+      color: white;
+      padding: 18px 8px 14px;
+      text-align: center;
+      font-size: clamp(18px, 6.4vw, 32px);
+      font-weight: bold;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    header span { font-size: 1.1em; vertical-align: middle; margin-right: 6px; }
+
+    .count {
+      font-size: 15px;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      opacity: 0.9;
+    }
+
+    .count b { font-size: 22px; margin: 0 2px; }
+
+    .container {
+      padding: 14px 12px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ---- 入力 ---- */
+    .input-card {
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    }
+
+    .input-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .input-sub {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 160px;
+      border: 2px solid #CFD8DC;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 17px;   /* 16px以上でiPhoneの自動ズームを防止 */
+      line-height: 1.5;
+      background: #F7F9FB;
+      resize: vertical;
+    }
+
+    textarea:focus { outline: none; border-color: #1565C0; background: white; }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .main-btn {
+      flex: 2;
+      padding: 14px;
+      background: linear-gradient(135deg, #E53935, #EF5350);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(229,57,53,0.35);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s;
+    }
+
+    .main-btn:active { transform: scale(0.96); }
+
+    .tool-btn {
+      flex: 1;
+      padding: 10px;
+      background: white;
+      color: #455A64;
+      border: 1px solid #CFD8DC;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+
+    .tool-btn:active { transform: scale(0.96); background: #ECEFF1; }
+
+    /* ---- 名簿から選ぶ ---- */
+    .roster-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 16px 0 8px;
+      padding-top: 14px;
+      border-top: 1px solid #EEF2F7;
+    }
+
+    .roster-head .input-title { margin: 0; }
+
+    .roster-head small {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1565C0;
+      margin-left: 6px;
+    }
+
+    .small-btn {
+      padding: 6px 10px;
+      background: white;
+      color: #455A64;
+      border: 1px solid #CFD8DC;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .small-btn:active { background: #ECEFF1; }
+
+    .search {
+      width: 100%;
+      height: 42px;
+      border: 2px solid #CFD8DC;
+      border-radius: 12px;
+      padding: 0 12px;
+      font-family: inherit;
+      font-size: 16px;
+      background: #F7F9FB;
+      margin-bottom: 8px;
+    }
+
+    .search:focus { outline: none; border-color: #1565C0; background: white; }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border: 1.5px solid #CFD8DC;
+      border-radius: 999px;
+      background: white;
+      color: #37474F;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.08s;
+    }
+
+    .chip:active { transform: scale(0.94); }
+
+    .chip.on {
+      background: #1565C0;
+      border-color: #1565C0;
+      color: white;
+    }
+
+    .chip.on::before { content: '✓ '; }
+
+    .chips-empty {
+      font-size: 13px;
+      color: #90A4AE;
+      padding: 8px 4px;
+    }
+
+    .add-new {
+      display: none;
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      background: #E3F2FD;
+      color: #1565C0;
+      border: 1px dashed #64B5F6;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .add-new.show { display: block; }
+
+    /* ---- 名簿の編集 ---- */
+    .roster-edit { display: none; margin-top: 10px; }
+    .roster-edit.show { display: block; }
+    .roster-edit textarea { height: 260px; font-size: 16px; }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: #90A4AE;
+      font-size: 12px;
+      text-decoration: underline;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    /* ---- 一覧上部のツール ---- */
+    .tools-row {
+      display: none;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tools-row.show { display: flex; }
+
+    .tools-row .tool-btn { font-size: 15px; padding: 9px 4px; }
+
+    a.tool-btn { text-decoration: none; text-align: center; }
+
+    /* ---- 一覧（2列・縦方向に番号順） ---- */
+    .list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-flow: column;
+      gap: 6px;
+    }
+
+    .item {
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px 6px 6px;
+      min-width: 0;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.10);
+      animation: slideIn 0.25s ease both;
+    }
+
+    .item {
+      cursor: pointer;
+      border: 2px solid transparent;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, border-color 0.15s, transform 0.08s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .item:active { transform: scale(0.97); }
+
+    /* 未集金 */
+    .item .num { background: #B0BEC5; }
+    .item .mark {
+      flex: 0 0 auto;
+      font-size: 13px;
+      font-weight: 800;
+      color: #B0BEC5;
+      border: 1.5px dashed #CFD8DC;
+      border-radius: 8px;
+      padding: 2px 0;
+      width: 36px;           /* 未／✓済で幅を変えない */
+      text-align: center;
+      letter-spacing: -0.05em;
+    }
+
+    /* 集金済 */
+    .item.paid { background: #E8F5E9; border-color: #43A047; }
+    .item.paid .num { background: linear-gradient(135deg,#2E7D32,#66BB6A); }
+    .item.paid .name { color: #1B5E20; }
+    .item.paid .mark {
+      color: white;
+      background: #43A047;
+      border: 1.5px solid #43A047;
+    }
+
+    /* 会費・合計 */
+    .summary {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: none;
+      background: white;
+      border-radius: 16px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.14);
+    }
+
+    .summary.show { display: block; }
+
+    .fee-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #EEF2F7;
+    }
+
+    .fee-label { font-size: 16px; font-weight: 700; color: #333; }
+
+    .fee-ctrl { display: flex; align-items: center; gap: 6px; }
+
+    .fee-step {
+      width: 36px; height: 36px;
+      border: none; border-radius: 50%;
+      background: #1565C0; color: white;
+      font-size: 20px; line-height: 1;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .fee-input {
+      width: 92px; height: 40px;
+      border: 2px solid #CFD8DC; border-radius: 10px;
+      text-align: right; padding: 0 8px;
+      font-family: inherit; font-size: 22px; font-weight: 800; color: #1565C0;
+      -moz-appearance: textfield;
+    }
+
+    .fee-input::-webkit-outer-spin-button,
+    .fee-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .fee-input:focus { outline: none; border-color: #1565C0; }
+
+    .yen { font-size: 16px; font-weight: 700; color: #555; }
+
+    .totals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-top: 8px;
+    }
+
+    .tot-box { border-radius: 12px; padding: 6px 10px; }
+    .tot-box.ok { background: #E8F5E9; }
+    .tot-box.ng { background: #FFF3E0; }
+
+    .tot-label { font-size: 12px; font-weight: 700; color: #607D8B; }
+    .tot-box.ok .tot-label { color: #2E7D32; }
+    .tot-box.ng .tot-label { color: #E65100; }
+
+    .tot-val { font-size: 24px; font-weight: 800; line-height: 1.2; }
+    .tot-box.ok .tot-val { color: #1B5E20; }
+    .tot-box.ng .tot-val { color: #BF360C; }
+    .tot-val small { font-size: 14px; margin-left: 2px; }
+
+    .tot-sub { font-size: 12px; color: #78909C; font-weight: 700; }
+
+    .tot-all {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-size: 13px;
+      color: #78909C;
+      font-weight: 700;
+    }
+
+    .tot-all.done { color: #2E7D32; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .num {
+      flex: 0 0 auto;
+      width: 1.9em;
+      height: 1.5em;
+      border-radius: 999px;
+      background: var(--numBg, linear-gradient(135deg, #1565C0, #42A5F5));
+      color: white;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.04em;
+      font-size: var(--fs);
+    }
+
+    .name {
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+      color: #263238;
+      white-space: nowrap;
+      overflow: hidden;
+      font-size: var(--fs);
+      line-height: 1.3;
+    }
+
+
+    .note {
+      font-size: 12px;
+      color: #795548;
+      background: #FFF8E1;
+      border: 1px solid #FFE082;
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .empty {
+      text-align: center;
+      color: #90A4AE;
+      font-size: 14px;
+      padding: 30px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>💴</span>諏訪ピックルボール会費
+  <div class="count" id="count">参加 <b>0</b> 人</div>
+</header>
+
+<div class="container">
+
+  <div class="input-card" id="inputCard">
+    <div class="input-title">✏️ 参加者の氏名</div>
+    <div class="input-sub">1行に1人ずつ入力・貼り付け、または下の名簿からタップで選択</div>
+    <textarea id="names" placeholder="例）&#10;諏訪太郎&#10;岡谷花子&#10;茅野次郎" oninput="syncChips()"></textarea>
+    <button class="add-new" id="addNew" onclick="addTypedToRoster()"></button>
+
+    <div class="roster-head">
+      <div class="input-title">👥 名簿から選ぶ<small id="selCount"></small></div>
+      <button class="small-btn" onclick="toggleRosterEdit()">⚙️ 名簿の編集</button>
+    </div>
+
+    <div class="roster-edit" id="rosterEdit">
+      <div class="input-sub">名簿の氏名を1行に1人ずつ。追加・削除・並べ替えをして「名簿を保存」を押してください。</div>
+      <textarea id="rosterText"></textarea>
+      <div class="btn-row">
+        <button class="tool-btn" onclick="toggleRosterEdit()">キャンセル</button>
+        <button class="tool-btn" style="flex:2;background:#1565C0;color:white;border-color:#1565C0" onclick="saveRosterEdit()">💾 名簿を保存</button>
+      </div>
+      <button class="link-btn" onclick="resetRoster()">名簿を最初の状態に戻す</button>
+    </div>
+
+    <input class="search" id="search" type="search" placeholder="🔍 名前で絞り込み" oninput="renderChips()">
+    <div class="chips" id="chips"></div>
+
+    <div class="btn-row">
+      <button class="tool-btn" onclick="clearNames()">✕ クリア</button>
+      <button class="main-btn" onclick="showList()">📋 表示</button>
+    </div>
+  </div>
+
+  <div class="tools-row" id="toolsRow">
+    <button class="tool-btn" onclick="editNames()">✏️ 編集</button>
+    <button class="tool-btn" onclick="changeSize(-1)">A−</button>
+    <button class="tool-btn" onclick="changeSize(+1)">A＋</button>
+    <button class="tool-btn" onclick="clearPaid()">↺ 全解除</button>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="fee-row">
+      <div class="fee-label">💴 会費（1人）</div>
+      <div class="fee-ctrl">
+        <button class="fee-step" onclick="stepFee(-100)">−</button>
+        <input class="fee-input" id="fee" type="number" inputmode="numeric" min="0" step="100" oninput="onFeeInput()">
+        <span class="yen">円</span>
+        <button class="fee-step" onclick="stepFee(+100)">＋</button>
+      </div>
+    </div>
+    <div class="totals">
+      <div class="tot-box ok">
+        <div class="tot-label">✓ 集金済 合計</div>
+        <div class="tot-val" id="totPaid">0<small>円</small></div>
+        <div class="tot-sub" id="cntPaid">0人</div>
+      </div>
+      <div class="tot-box ng">
+        <div class="tot-label">未集金</div>
+        <div class="tot-val" id="totUnpaid">0<small>円</small></div>
+        <div class="tot-sub" id="cntUnpaid">0人</div>
+      </div>
+      <div class="tot-all" id="totAll"></div>
+    </div>
+  </div>
+
+  <div id="note"></div>
+  <div class="list" id="list"></div>
+
+</div>
+
+<script>
+  const STORAGE_KEY = 'pickle_fee_v1';   // 名簿(pickle_roster_v1)はMembersアプリと共通
+  const SIZES = [16, 18, 20, 23, 26, 30];
+  let sizeIdx = 1;
+  let names = [];
+  let paid = [];        // names と同じ並びで true/false
+  let fee = 500;
+
+  // ---- 名簿 ----
+  const ROSTER_KEY = 'pickle_roster_v1';
+  const DEFAULT_ROSTER = `
+瀬口賢一
+瀬口ちなみ
+有賀裕
+伊藤なおみ
+伊藤未希
+伊藤恋矢
+今井良治
+上野史博
+植松
+大久保貴史
+大澤稔也
+太田朝己
+荻村奈緒
+小澤毅
+尾上 実
+笠原えりさ
+笠原幹人
+樫(ｶｼ)
+片桐正
+鎌田 勲
+亀田浩史
+カロ
+ガブテロ・リズ
+アロンゾ・ジェイク
+アルバート ニーニョ レイ
+鬼崎正則
+北原洋平
+北村和枝
+北村英樹
+木元伸一
+楠見悟史
+楠見純大
+楠見値香代
+窪田薫
+久畄島
+小泉章
+小泉しのぶ
+小泉尚哉
+小柳哲雄
+白岡三奈
+清水功平
+清水法子
+新保ひなた
+新保朋子
+鈴木彰
+高森ゆき子
+田尻
+津村裕美
+津村憂香 娘
+飛松 改
+長井由里子
+長尾真仁
+長尾有紀
+成田学人
+西野稔
+西村 和明
+西村 美保
+根岸貞次
+根岸直子
+野村直樹
+野村千史
+林誠二
+林 優樹
+長谷川綾一
+長谷川佳亮
+原 元気
+原 千恵珠
+原 千恵珠の父
+原田和彦
+本道
+前島利彦
+松岡まゆみ
+松澤新一
+松澤文子
+松村牧紀
+丸山麻貴
+松本ペリドット
+峯松秀樹
+宮下なをゑ
+矢崎ともみ
+山崎孝宏
+山田尚美
+山田怜亜
+山田連太郎
+山田喜靖
+山本一雄
+Yukipゆき
+李
+`;
+  let roster = [];
+
+  function uniq(arr) { return [...new Set(arr)]; }
+
+  function loadRoster() {
+    try {
+      const raw = localStorage.getItem(ROSTER_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) { roster = uniq(data); return; }
+      }
+    } catch (e) { /* ignore */ }
+    roster = uniq(parseNames(DEFAULT_ROSTER));
+  }
+
+  function saveRoster() {
+    try { localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); } catch (e) { /* ignore */ }
+  }
+
+  // 入力欄の現在の氏名（重複なし）
+  function currentNames() {
+    return parseNames(document.getElementById('names').value);
+  }
+
+  function renderChips() {
+    const q = document.getElementById('search').value.replace(/[\s　]/g, '');
+    const selected = new Set(currentNames());
+    const shown = roster.filter(n => !q || n.replace(/[\s　]/g, '').includes(q));
+    const box = document.getElementById('chips');
+    box.innerHTML = shown.length
+      ? shown.map(n => {
+          const i = roster.indexOf(n);
+          return `<button class="chip${selected.has(n) ? ' on' : ''}" onclick="toggleName(${i})">${escapeHtml(n)}</button>`;
+        }).join('')
+      : `<div class="chips-empty">${roster.length ? '該当する名前がありません' : '名簿が空です。「名簿の編集」から登録してください'}</div>`;
+
+    const inRoster = [...selected].filter(n => roster.includes(n)).length;
+    document.getElementById('selCount').textContent = inRoster ? `${inRoster}人選択中` : '';
+
+    // 直接入力した名前のうち、名簿にない人
+    const newOnes = [...selected].filter(n => !roster.includes(n));
+    const btn = document.getElementById('addNew');
+    btn.classList.toggle('show', newOnes.length > 0);
+    btn.textContent = `＋ 名簿にない名前を名簿に追加（${newOnes.length}人：${newOnes.slice(0, 3).join('、')}${newOnes.length > 3 ? ' …' : ''}）`;
+  }
+
+  // チップをタップ：入力欄の末尾に追加 / もう一度タップで削除
+  function toggleName(i) {
+    const name = roster[i];
+    const ta = document.getElementById('names');
+    const lines = ta.value.split(/\r\n|\r|\n/);
+    const has = parseNames(ta.value).includes(name);
+    let out;
+    if (has) {
+      out = lines.filter(l => parseNames(l)[0] !== name);
+    } else {
+      out = lines.filter((l, idx) => !(idx === lines.length - 1 && l.trim() === '')); // 末尾の空行を整理
+      out.push(name);
+    }
+    ta.value = out.join('\n').replace(/^\n+/, '');
+    save(ta.value);
+    renderChips();
+  }
+
+  function syncChips() {
+    save(document.getElementById('names').value);
+    renderChips();
+  }
+
+  function addTypedToRoster() {
+    const newOnes = currentNames().filter(n => !roster.includes(n));
+    if (!newOnes.length) return;
+    roster = roster.concat(newOnes);
+    saveRoster();
+    renderChips();
+  }
+
+  function toggleRosterEdit() {
+    const box = document.getElementById('rosterEdit');
+    const open = !box.classList.contains('show');
+    if (open) document.getElementById('rosterText').value = roster.join('\n');
+    box.classList.toggle('show', open);
+  }
+
+  function saveRosterEdit() {
+    roster = uniq(parseNames(document.getElementById('rosterText').value));
+    saveRoster();
+    document.getElementById('rosterEdit').classList.remove('show');
+    renderChips();
+  }
+
+  function resetRoster() {
+    if (!confirm('名簿を最初の状態（初期登録の氏名）に戻しますか？\n追加・編集した内容は消えます。')) return;
+    roster = uniq(parseNames(DEFAULT_ROSTER));
+    saveRoster();
+    document.getElementById('rosterText').value = roster.join('\n');
+    renderChips();
+  }
+
+  // 番号の色（表示ボタンを押すたびにランダムで1色を選び、全員同じ色にする）
+  const NUM_COLORS = [
+    'linear-gradient(135deg,#1565C0,#42A5F5)', // 青
+    'linear-gradient(135deg,#2E7D32,#66BB6A)', // 緑
+    'linear-gradient(135deg,#E65100,#FFA726)', // オレンジ
+    'linear-gradient(135deg,#6A1B9A,#AB47BC)', // 紫
+    'linear-gradient(135deg,#00838F,#26C6DA)', // 水色
+    'linear-gradient(135deg,#C62828,#EF5350)', // 赤
+    'linear-gradient(135deg,#4E342E,#8D6E63)', // 茶
+    'linear-gradient(135deg,#283593,#7986CB)', // 紺
+    'linear-gradient(135deg,#AD1457,#EC407A)', // ピンク
+  ];
+  let colorIdx = -1;
+  let savedPaidNames = [];
+
+  function pickColor() {
+    let next;
+    do { next = Math.floor(Math.random() * NUM_COLORS.length); }
+    while (next === colorIdx && NUM_COLORS.length > 1);   // 前回と同じ色は避ける
+    colorIdx = next;
+    document.getElementById('list').style.setProperty('--numBg', NUM_COLORS[colorIdx]);
+  }
+
+  // ---- 保存・読込 ----
+  function save(text) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ text, sizeIdx, fee, paidNames: names.filter((n, i) => paid[i]) }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (typeof data.sizeIdx === 'number') sizeIdx = Math.min(SIZES.length - 1, Math.max(0, data.sizeIdx));
+      if (typeof data.fee === 'number') fee = data.fee;
+      if (Array.isArray(data.paidNames)) savedPaidNames = data.paidNames;
+      return typeof data.text === 'string' ? data.text : null;
+    } catch (e) { return null; }
+  }
+
+  // ---- 氏名の取り出し ----
+  // 改行(CRLF/LF)で区切り、前後の空白（全角含む）を除去、空行を除外。
+  // 行頭の「1.」「1)」「①」「・」などの番号・記号も取り除く。
+  function parseNames(text) {
+    return text
+      .split(/\r\n|\r|\n/)
+      .map(s => s.replace(/^[\s　]+|[\s　]+$/g, ''))
+      .map(s => s.replace(/^(?:[0-9０-９]+[.．、,，)）:：]?|[①-⑳]|[・･\-－*＊●○■□◆◇])[\s　]*/, ''))
+      .filter(s => s.length > 0);
+  }
+
+  // ---- 表示 ----
+  function showList() {
+    const text = document.getElementById('names').value;
+    // 氏名を編集しても、残っている人のチェックは引き継ぐ
+    const pool = names.length ? names.filter((n, i) => paid[i]) : savedPaidNames.slice();
+    names = parseNames(text);
+    paid = names.map(n => {
+      const k = pool.indexOf(n);
+      if (k >= 0) { pool.splice(k, 1); return true; }
+      return false;
+    });
+    save(text);
+    render();
+    if (names.length > 0) {
+      document.getElementById('inputCard').style.display = 'none';
+      document.getElementById('toolsRow').classList.add('show');
+      document.getElementById('summary').classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function render() {
+    const list = document.getElementById('list');
+    const note = document.getElementById('note');
+
+    if (names.length === 0) {
+      list.innerHTML = '';
+      note.innerHTML = '';
+      return;
+    }
+
+    // 縦方向に番号順（左列 1〜, 右列 続き）
+    const rows = Math.ceil(names.length / 2);
+    list.style.gridTemplateRows = `repeat(${rows}, auto)`;
+    list.style.setProperty('--fs', SIZES[sizeIdx] + 'px');
+
+    list.innerHTML = names.map((n, i) => `
+      <div class="item${paid[i] ? ' paid' : ''}" onclick="togglePaid(${i})" style="animation-delay:${Math.min(i, 30) * 0.015}s">
+        <div class="num">${i + 1}</div>
+        <div class="name">${escapeHtml(n)}</div>
+        <div class="mark">${paid[i] ? '✓済' : '未'}</div>
+      </div>`).join('');
+    updateTotals();
+
+    // 同名チェックと人数上限の注意
+    const msgs = [];
+    const dup = names.filter((n, i) => names.indexOf(n) !== i);
+    if (dup.length) msgs.push(`同じ名前があります：${[...new Set(dup)].map(escapeHtml).join('、')}`);
+    note.innerHTML = msgs.length ? `<div class="note">⚠️ ${msgs.join('<br>')}</div>` : '';
+
+    requestAnimationFrame(fitNames);
+  }
+
+  // ---- 集金チェック ----
+  function togglePaid(i) {
+    paid[i] = !paid[i];
+    const el = document.querySelectorAll('.item')[i];
+    if (el) {
+      el.classList.toggle('paid', paid[i]);
+      el.querySelector('.mark').textContent = paid[i] ? '✓済' : '未';
+      el.style.animation = 'none';
+    }
+    requestAnimationFrame(fitNames);
+    save(document.getElementById('names').value);
+    updateTotals();
+  }
+
+  function clearPaid() {
+    if (!paid.some(Boolean)) return;
+    if (!confirm('集金済みのチェックをすべて外しますか？')) return;
+    paid = names.map(() => false);
+    save(document.getElementById('names').value);
+    render();
+  }
+
+  function yen(v) { return v.toLocaleString('ja-JP'); }
+
+  function updateTotals() {
+    const n = names.length;
+    const p = paid.filter(Boolean).length;
+    document.getElementById('count').innerHTML = `集金 <b>${p}</b> / ${n} 人`;
+    document.getElementById('totPaid').innerHTML = `${yen(p * fee)}<small>円</small>`;
+    document.getElementById('cntPaid').textContent = `${p}人`;
+    document.getElementById('totUnpaid').innerHTML = `${yen((n - p) * fee)}<small>円</small>`;
+    document.getElementById('cntUnpaid').textContent = `${n - p}人`;
+    const all = document.getElementById('totAll');
+    all.classList.toggle('done', n > 0 && p === n);
+    all.textContent = (n > 0 && p === n)
+      ? `🎉 全員集金済み（${n}人 × ${yen(fee)}円 ＝ ${yen(n * fee)}円）`
+      : `予定合計 ${n}人 × ${yen(fee)}円 ＝ ${yen(n * fee)}円`;
+  }
+
+  function onFeeInput() {
+    const v = parseInt(document.getElementById('fee').value, 10);
+    fee = Number.isFinite(v) && v >= 0 ? v : 0;
+    save(document.getElementById('names').value);
+    updateTotals();
+  }
+
+  function stepFee(d) {
+    fee = Math.max(0, fee + d);
+    document.getElementById('fee').value = fee;
+    save(document.getElementById('names').value);
+    updateTotals();
+  }
+
+  // 長い名前は枠に収まるよう文字を縮小
+  function fitNames() {
+    const base = SIZES[sizeIdx];
+    document.querySelectorAll('.name').forEach(el => {
+      el.style.fontSize = '';
+      el.style.whiteSpace = '';
+      let fs = base;
+      const minFs = Math.max(13, Math.round(base * 0.6));
+      while (el.scrollWidth > el.clientWidth && fs > minFs) {
+        fs -= 1;
+        el.style.fontSize = fs + 'px';
+      }
+      // それでも入らない長い名前は2行に折り返す
+      if (el.scrollWidth > el.clientWidth) {
+        el.style.whiteSpace = 'normal';
+        el.style.wordBreak = 'break-all';
+      }
+    });
+  }
+
+  function editNames() {
+    document.getElementById('inputCard').style.display = 'block';
+    document.getElementById('toolsRow').classList.remove('show');
+    document.getElementById('summary').classList.remove('show');
+    renderChips();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function clearNames() {
+    if (document.getElementById('names').value && !confirm('入力した氏名を消しますか？')) return;
+    document.getElementById('names').value = '';
+    names = [];
+    paid = [];
+    savedPaidNames = [];
+    save('');
+    render();
+    renderChips();
+  }
+
+  function changeSize(d) {
+    sizeIdx = Math.min(SIZES.length - 1, Math.max(0, sizeIdx + d));
+    save(document.getElementById('names').value);
+    render();
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  window.addEventListener('resize', () => requestAnimationFrame(fitNames));
+
+  // 起動時：名簿を読み込み、前回の一覧があればそのまま表示
+  loadRoster();
+  const saved = load();
+  document.getElementById('fee').value = fee;
+  if (saved) {
+    document.getElementById('names').value = saved;
+    showList();
+  }
+  renderChips();
+</script>
+</body>
+</html>
