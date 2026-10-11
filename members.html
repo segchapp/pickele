@@ -71,7 +71,7 @@
 
     textarea {
       width: 100%;
-      height: 220px;
+      height: 160px;
       border: 2px solid #CFD8DC;
       border-radius: 12px;
       padding: 10px 12px;
@@ -123,6 +123,125 @@
     }
 
     .tool-btn:active { transform: scale(0.96); background: #ECEFF1; }
+
+    /* ---- 名簿から選ぶ ---- */
+    .roster-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 16px 0 8px;
+      padding-top: 14px;
+      border-top: 1px solid #EEF2F7;
+    }
+
+    .roster-head .input-title { margin: 0; }
+
+    .roster-head small {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1565C0;
+      margin-left: 6px;
+    }
+
+    .small-btn {
+      padding: 6px 10px;
+      background: white;
+      color: #455A64;
+      border: 1px solid #CFD8DC;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .small-btn:active { background: #ECEFF1; }
+
+    .search {
+      width: 100%;
+      height: 42px;
+      border: 2px solid #CFD8DC;
+      border-radius: 12px;
+      padding: 0 12px;
+      font-family: inherit;
+      font-size: 16px;
+      background: #F7F9FB;
+      margin-bottom: 8px;
+    }
+
+    .search:focus { outline: none; border-color: #1565C0; background: white; }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border: 1.5px solid #CFD8DC;
+      border-radius: 999px;
+      background: white;
+      color: #37474F;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.08s;
+    }
+
+    .chip:active { transform: scale(0.94); }
+
+    .chip.on {
+      background: #1565C0;
+      border-color: #1565C0;
+      color: white;
+    }
+
+    .chip.on::before { content: '✓ '; }
+
+    .chips-empty {
+      font-size: 13px;
+      color: #90A4AE;
+      padding: 8px 4px;
+    }
+
+    .add-new {
+      display: none;
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      background: #E3F2FD;
+      color: #1565C0;
+      border: 1px dashed #64B5F6;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .add-new.show { display: block; }
+
+    /* ---- 名簿の編集 ---- */
+    .roster-edit { display: none; margin-top: 10px; }
+    .roster-edit.show { display: block; }
+    .roster-edit textarea { height: 260px; font-size: 16px; }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: #90A4AE;
+      font-size: 12px;
+      text-decoration: underline;
+      margin-top: 8px;
+      cursor: pointer;
+    }
 
     /* ---- 一覧上部のツール ---- */
     .tools-row {
@@ -219,8 +338,28 @@
 
   <div class="input-card" id="inputCard">
     <div class="input-title">✏️ 参加者の氏名</div>
-    <div class="input-sub">1行に1人ずつ貼り付けてください（空行は無視されます）</div>
-    <textarea id="names" placeholder="例）&#10;諏訪太郎&#10;岡谷花子&#10;茅野次郎"></textarea>
+    <div class="input-sub">1行に1人ずつ入力・貼り付け、または下の名簿からタップで選択</div>
+    <textarea id="names" placeholder="例）&#10;諏訪太郎&#10;岡谷花子&#10;茅野次郎" oninput="syncChips()"></textarea>
+    <button class="add-new" id="addNew" onclick="addTypedToRoster()"></button>
+
+    <div class="roster-head">
+      <div class="input-title">👥 名簿から選ぶ<small id="selCount"></small></div>
+      <button class="small-btn" onclick="toggleRosterEdit()">⚙️ 名簿の編集</button>
+    </div>
+
+    <div class="roster-edit" id="rosterEdit">
+      <div class="input-sub">名簿の氏名を1行に1人ずつ。追加・削除・並べ替えをして「名簿を保存」を押してください。</div>
+      <textarea id="rosterText"></textarea>
+      <div class="btn-row">
+        <button class="tool-btn" onclick="toggleRosterEdit()">キャンセル</button>
+        <button class="tool-btn" style="flex:2;background:#1565C0;color:white;border-color:#1565C0" onclick="saveRosterEdit()">💾 名簿を保存</button>
+      </div>
+      <button class="link-btn" onclick="resetRoster()">名簿を最初の状態に戻す</button>
+    </div>
+
+    <input class="search" id="search" type="search" placeholder="🔍 名前で絞り込み" oninput="renderChips()">
+    <div class="chips" id="chips"></div>
+
     <div class="btn-row">
       <button class="tool-btn" onclick="clearNames()">✕ クリア</button>
       <button class="main-btn" onclick="showList()">📋 表示</button>
@@ -244,6 +383,197 @@
   const SIZES = [16, 18, 20, 23, 26, 30];
   let sizeIdx = 2;
   let names = [];
+
+  // ---- 名簿 ----
+  const ROSTER_KEY = 'pickle_roster_v1';
+  const DEFAULT_ROSTER = `
+瀬口賢一
+瀬口ちなみ
+有賀裕
+伊藤なおみ
+伊藤未希
+伊藤恋矢
+今井良治
+上野史博
+植松
+大久保貴史
+大澤稔也
+太田朝己
+荻村奈緒
+小澤毅
+尾上 実
+笠原えりさ
+笠原幹人
+樫(ｶｼ)
+片桐正
+鎌田 勲
+亀田浩史
+カロ
+ガブテロ・リズ
+アロンゾ・ジェイク
+アルバート ニーニョ レイ
+鬼崎正則
+北原洋平
+北村和枝
+北村英樹
+木元伸一
+楠見悟史
+楠見純大
+楠見値香代
+窪田薫
+久畄島
+小泉章
+小泉しのぶ
+小泉尚哉
+小柳哲雄
+白岡三奈
+清水功平
+清水法子
+新保ひなた
+新保朋子
+鈴木彰
+高森ゆき子
+田尻
+津村裕美
+津村憂香 娘
+飛松 改
+長井由里子
+長尾真仁
+長尾有紀
+成田学人
+西野稔
+西村 和明
+西村 美保
+根岸貞次
+根岸直子
+野村直樹
+野村千史
+林誠二
+林 優樹
+長谷川綾一
+長谷川佳亮
+原 元気
+原 千恵珠
+原 千恵珠の父
+原田和彦
+本道
+前島利彦
+松岡まゆみ
+松澤新一
+松澤文子
+松村牧紀
+丸山麻貴
+松本ペリドット
+峯松秀樹
+宮下なをゑ
+矢崎ともみ
+山崎孝宏
+山田尚美
+山田怜亜
+山田連太郎
+山田喜靖
+山本一雄
+Yukipゆき
+李
+`;
+  let roster = [];
+
+  function uniq(arr) { return [...new Set(arr)]; }
+
+  function loadRoster() {
+    try {
+      const raw = localStorage.getItem(ROSTER_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) { roster = uniq(data); return; }
+      }
+    } catch (e) { /* ignore */ }
+    roster = uniq(parseNames(DEFAULT_ROSTER));
+  }
+
+  function saveRoster() {
+    try { localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); } catch (e) { /* ignore */ }
+  }
+
+  // 入力欄の現在の氏名（重複なし）
+  function currentNames() {
+    return parseNames(document.getElementById('names').value);
+  }
+
+  function renderChips() {
+    const q = document.getElementById('search').value.replace(/[\s　]/g, '');
+    const selected = new Set(currentNames());
+    const shown = roster.filter(n => !q || n.replace(/[\s　]/g, '').includes(q));
+    const box = document.getElementById('chips');
+    box.innerHTML = shown.length
+      ? shown.map(n => {
+          const i = roster.indexOf(n);
+          return `<button class="chip${selected.has(n) ? ' on' : ''}" onclick="toggleName(${i})">${escapeHtml(n)}</button>`;
+        }).join('')
+      : `<div class="chips-empty">${roster.length ? '該当する名前がありません' : '名簿が空です。「名簿の編集」から登録してください'}</div>`;
+
+    const inRoster = [...selected].filter(n => roster.includes(n)).length;
+    document.getElementById('selCount').textContent = inRoster ? `${inRoster}人選択中` : '';
+
+    // 直接入力した名前のうち、名簿にない人
+    const newOnes = [...selected].filter(n => !roster.includes(n));
+    const btn = document.getElementById('addNew');
+    btn.classList.toggle('show', newOnes.length > 0);
+    btn.textContent = `＋ 名簿にない名前を名簿に追加（${newOnes.length}人：${newOnes.slice(0, 3).join('、')}${newOnes.length > 3 ? ' …' : ''}）`;
+  }
+
+  // チップをタップ：入力欄の末尾に追加 / もう一度タップで削除
+  function toggleName(i) {
+    const name = roster[i];
+    const ta = document.getElementById('names');
+    const lines = ta.value.split(/\r\n|\r|\n/);
+    const has = parseNames(ta.value).includes(name);
+    let out;
+    if (has) {
+      out = lines.filter(l => parseNames(l)[0] !== name);
+    } else {
+      out = lines.filter((l, idx) => !(idx === lines.length - 1 && l.trim() === '')); // 末尾の空行を整理
+      out.push(name);
+    }
+    ta.value = out.join('\n').replace(/^\n+/, '');
+    save(ta.value);
+    renderChips();
+  }
+
+  function syncChips() {
+    save(document.getElementById('names').value);
+    renderChips();
+  }
+
+  function addTypedToRoster() {
+    const newOnes = currentNames().filter(n => !roster.includes(n));
+    if (!newOnes.length) return;
+    roster = roster.concat(newOnes);
+    saveRoster();
+    renderChips();
+  }
+
+  function toggleRosterEdit() {
+    const box = document.getElementById('rosterEdit');
+    const open = !box.classList.contains('show');
+    if (open) document.getElementById('rosterText').value = roster.join('\n');
+    box.classList.toggle('show', open);
+  }
+
+  function saveRosterEdit() {
+    roster = uniq(parseNames(document.getElementById('rosterText').value));
+    saveRoster();
+    document.getElementById('rosterEdit').classList.remove('show');
+    renderChips();
+  }
+
+  function resetRoster() {
+    if (!confirm('名簿を最初の状態（初期登録の氏名）に戻しますか？\n追加・編集した内容は消えます。')) return;
+    roster = uniq(parseNames(DEFAULT_ROSTER));
+    saveRoster();
+    document.getElementById('rosterText').value = roster.join('\n');
+    renderChips();
+  }
 
   // 番号の色（表示ボタンを押すたびにランダムで1色を選び、全員同じ色にする）
   const NUM_COLORS = [
@@ -364,7 +694,8 @@
   function editNames() {
     document.getElementById('inputCard').style.display = 'block';
     document.getElementById('toolsRow').classList.remove('show');
-    document.getElementById('names').focus();
+    renderChips();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function clearNames() {
@@ -373,6 +704,7 @@
     names = [];
     save('');
     render();
+    renderChips();
   }
 
   function changeSize(d) {
@@ -387,12 +719,14 @@
 
   window.addEventListener('resize', () => requestAnimationFrame(fitNames));
 
-  // 起動時：前回の一覧があればそのまま表示
+  // 起動時：名簿を読み込み、前回の一覧があればそのまま表示
+  loadRoster();
   const saved = load();
   if (saved) {
     document.getElementById('names').value = saved;
     showList();
   }
+  renderChips();
 </script>
 </body>
 </html>
