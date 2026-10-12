@@ -392,7 +392,25 @@
 
     .tot-all.done { color: #2E7D32; }
 
-    .clear-paid { display: block; width: 100%; margin-top: 10px; font-size: 14px; padding: 8px; }
+    .fee-btns { display: flex; gap: 8px; margin-top: 10px; }
+    .fee-btns .tool-btn { font-size: 14px; padding: 8px 4px; }
+
+    /* 会費欄を表示するボタン（非表示中のみ） */
+    .fee-show {
+      display: none;
+      width: 100%;
+      margin-top: 12px;
+      font-size: 14px;
+      padding: 8px;
+    }
+
+    /* 会費欄 非表示モード：会費欄・未/✓済の印・集金済みの色分けを隠す */
+    .fee-off .summary.show { display: none; }
+    .fee-off .summary.show + .fee-show { display: block; }
+    .fee-off .item .mark { display: none; }
+    .fee-off .item { cursor: default; }
+    .fee-off .item.paid { background: white; border-color: transparent; }
+    .fee-off .item.paid .name { color: #263238; }
 
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -452,7 +470,7 @@
   <div class="count" id="count">参加 <b>0</b> 人</div>
 </header>
 
-<div class="container">
+<div class="container" id="container">
 
   <div class="input-card" id="inputCard">
     <div class="input-title">✏️ 参加者の氏名</div>
@@ -517,8 +535,12 @@
       </div>
       <div class="tot-all" id="totAll"></div>
     </div>
-    <button class="tool-btn clear-paid" onclick="clearPaid()">↺ 集金チェックを全解除</button>
+    <div class="fee-btns">
+      <button class="tool-btn" onclick="clearPaid()">↺ チェック全解除</button>
+      <button class="tool-btn" onclick="setFeeVisible(false)">🙈 会費欄を隠す</button>
+    </div>
   </div>
+  <button class="tool-btn fee-show" onclick="setFeeVisible(true)">💴 会費欄を表示</button>
 
 </div>
 
@@ -530,6 +552,7 @@
   let names = [];
   let paid = [];        // names と同じ並びで true/false
   let fee = 400;
+  let feeVisible = true;
 
   // ---- 名簿 ----
   const ROSTER_KEY = 'pickle_roster_v1';
@@ -748,7 +771,7 @@ Yukipゆき
   // ---- 保存・読込 ----
   function save(text) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ text, sizeIdx, fee, paidNames: names.filter((n, i) => paid[i]) }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ text, sizeIdx, fee, feeVisible, paidNames: names.filter((n, i) => paid[i]) }));
     } catch (e) { /* ignore */ }
   }
 
@@ -761,6 +784,7 @@ Yukipゆき
       if (typeof data.sizeIdx === 'number') sizeIdx = Math.min(SIZES.length - 1, Math.max(0, data.sizeIdx));
       if (typeof data.fee === 'number') fee = data.fee;
       if (Array.isArray(data.paidNames)) savedPaidNames = data.paidNames;
+      if (typeof data.feeVisible === 'boolean') feeVisible = data.feeVisible;
       return typeof data.text === 'string' ? data.text : null;
     } catch (e) { return null; }
   }
@@ -843,6 +867,7 @@ Yukipゆき
 
   // ---- 集金チェック ----
   function togglePaid(i) {
+    if (!feeVisible) return;   // 会費欄を隠している間はタップしても変えない
     paid[i] = !paid[i];
     const el = document.querySelectorAll('.item')[i];
     if (el) {
@@ -865,10 +890,21 @@ Yukipゆき
 
   function yen(v) { return v.toLocaleString('ja-JP'); }
 
+  function setFeeVisible(v) {
+    feeVisible = v;
+    document.getElementById('container').classList.toggle('fee-off', !feeVisible);
+    save(document.getElementById('names').value);
+    updateTotals();
+    requestAnimationFrame(fitNames);
+    if (v) setTimeout(() => document.getElementById('summary').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+
   function updateTotals() {
     const n = names.length;
     const p = paid.filter(Boolean).length;
-    document.getElementById('count').innerHTML = `参加 <b>${n}</b> 人 ・ 集金 ${p} 人`;
+    document.getElementById('count').innerHTML = feeVisible
+      ? `参加 <b>${n}</b> 人 ・ 集金 ${p} 人`
+      : `参加 <b>${n}</b> 人`;
     document.getElementById('totPaid').innerHTML = `${yen(p * fee)}<small>円</small>`;
     document.getElementById('cntPaid').textContent = `${p}人`;
     document.getElementById('totUnpaid').innerHTML = `${yen((n - p) * fee)}<small>円</small>`;
@@ -948,6 +984,7 @@ Yukipゆき
   // 起動時：名簿を読み込み、前回の一覧があればそのまま表示
   loadRoster();
   const saved = load();
+  document.getElementById('container').classList.toggle('fee-off', !feeVisible);
   document.getElementById('fee').value = fee;
   if (saved) {
     document.getElementById('names').value = saved;
