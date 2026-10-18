@@ -1401,6 +1401,7 @@
 
   // ---- 名簿 ----
   const ROSTER_KEY = 'pickle_roster_v1';
+  const ROSTER_SEEN_KEY = 'pickle_roster_default_seen_v1';   // この端末が最後に取り込んだ初期名簿
   const DEFAULT_ROSTER = `
 瀬口賢一
 瀬口ちなみ
@@ -1411,6 +1412,8 @@
 今井良治
 上野史博
 植松
+漆崎和平
+漆崎優子
 大久保貴史
 大澤稔也
 太田朝己
@@ -1437,6 +1440,8 @@
 楠見値香代
 窪田薫
 久畄島
+久根 正樹
+久根 文代
 小泉章
 小泉しのぶ
 小泉尚哉
@@ -1448,7 +1453,7 @@
 新保朋子
 鈴木彰
 高森ゆき子
-田尻
+田尻えり
 津村裕美
 津村憂香 娘
 飛松 改
@@ -1471,6 +1476,7 @@
 原 千恵珠
 原 千恵珠の父
 原田和彦
+日下部真弓
 本道
 前島利彦
 松岡まゆみ
@@ -1481,6 +1487,7 @@
 松本ペリドット
 峯松秀樹
 宮下なをゑ
+秦百合子
 矢崎ともみ
 山崎孝宏
 山田尚美
@@ -1496,14 +1503,27 @@ Yukipゆき
   function uniq(arr) { return [...new Set(arr)]; }
 
   function loadRoster() {
+    const defaults = uniq(parseNames(DEFAULT_ROSTER));
+    let saved = null, seen = null;
     try {
       const raw = localStorage.getItem(ROSTER_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        if (Array.isArray(data)) { roster = uniq(data); return; }
-      }
+      if (raw) { const d = JSON.parse(raw); if (Array.isArray(d)) saved = uniq(d); }
+      const rawSeen = localStorage.getItem(ROSTER_SEEN_KEY);
+      if (rawSeen) { const d = JSON.parse(rawSeen); if (Array.isArray(d)) seen = d; }
     } catch (e) { /* ignore */ }
-    roster = uniq(parseNames(DEFAULT_ROSTER));
+    if (!saved) {
+      roster = defaults;
+    } else {
+      // 初期名簿に新しく加わった氏名を、この端末の名簿にも自動で追加する
+      // （この端末で削除した氏名は、初期名簿から一度消えない限り復活させない）
+      const seenSet = new Set(seen || []);
+      const added = defaults.filter(n => !seenSet.has(n) && !saved.includes(n));
+      roster = saved.concat(added);
+    }
+    try {
+      localStorage.setItem(ROSTER_SEEN_KEY, JSON.stringify(defaults));
+      localStorage.setItem(ROSTER_KEY, JSON.stringify(roster));
+    } catch (e) { /* ignore */ }
   }
 
   function saveRoster() {
