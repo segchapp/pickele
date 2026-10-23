@@ -549,6 +549,8 @@
       margin-left: 6px;
     }
     #court .fixed-clear {
+      flex: 0 0 auto;
+      white-space: nowrap;
       padding: 6px 12px;
       background: white;
       color: #455A64;
@@ -560,7 +562,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     #court .fixed-inputs {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);   /* 4枠×2段 */
       gap: 8px;
     }
     #court .fixed-input {
@@ -587,10 +590,12 @@
       min-height: 1em;
       text-align: center;
     }
+    #court .shuffle-row { display: flex; gap: 8px; margin-bottom: 12px; }
     #court .shuffle-btn {
       display: block;
-      width: 100%;
-      padding: 18px;
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 18px 4px;
       background: linear-gradient(135deg, #E53935, #EF5350);
       color: white;
       border: none;
@@ -599,12 +604,20 @@
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 5px 15px rgba(229,57,53,0.40);
-      margin-bottom: 12px;
-      letter-spacing: 3px;
+      letter-spacing: 1px;
+      white-space: nowrap;
       -webkit-tap-highlight-color: transparent;
       transition: transform 0.12s;
     }
     #court .shuffle-btn:active { transform: scale(0.96); }
+    #court .shuffle-btn.main-mode { flex: 2 1 0; }   /* 通常:★ ＝ 約2:1 */
+    #court .shuffle-btn.star-mode {
+      flex: 1 1 0;
+      font-size: clamp(14px, 4.4vw, 18px);
+      letter-spacing: 0;
+      background: linear-gradient(135deg, #F57F17, #FFB300);
+      box-shadow: 0 5px 15px rgba(245,127,23,0.40);
+    }
     #court .c-tools {
       display: flex;
       gap: 8px;
@@ -798,6 +811,21 @@
       margin-bottom: 12px;
     }
 
+    /* 上級者マーク：番号をタップすると右上に★ */
+    #court .badge, #court .rest-badge { position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    #court .badge:active, #court .rest-badge:active { transform: scale(0.94); }
+    #court .badge.star::after, #court .rest-badge.star::after {
+      content: '★';
+      position: absolute;
+      top: -0.32em;
+      right: -0.12em;
+      font-size: 0.5em;
+      line-height: 1;
+      color: #FFD600;
+      text-shadow: 0 0 2px #5D4037, 0 1px 3px rgba(0,0,0,0.6);
+      pointer-events: none;
+    }
+
     /* 番号の下に氏名を表示 */
     #court .slot { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
     #court .slot .badge { flex: none; width: 100%; }
@@ -943,10 +971,14 @@
 
     <div class="fixed-card">
       <div class="fixed-head">
-        <div class="fixed-title">💤 お休み指定<small>0〜4人・番号で入力</small></div>
+        <div class="fixed-title">💤 お休み指定<small>0〜8人・番号で入力</small></div>
         <button class="fixed-clear" onclick="clearFixed()">✕ クリア</button>
       </div>
       <div class="fixed-inputs">
+        <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+        <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+        <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
+        <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
         <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
         <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
         <input class="fixed-input" type="number" inputmode="numeric" min="1" max="30" oninput="onFixedInput()">
@@ -955,7 +987,10 @@
       <div class="fixed-msg" id="fixedMsg"></div>
     </div>
 
-    <button class="shuffle-btn" onclick="assign()">🔀 シャッフル !</button>
+    <div class="shuffle-row">
+      <button class="shuffle-btn main-mode" onclick="assign()">🔀 シャッフル !</button>
+      <button class="shuffle-btn star-mode" onclick="assign(true)">★シャッフル</button>
+    </div>
 
     <div class="c-tools">
       <button class="tool-btn" onclick="toggleStats()">📊 履歴</button>
@@ -1002,7 +1037,7 @@
         if (typeof data.B === 'number') B = data.B;
         if (Array.isArray(data.fixedRaw)) {
           const inputs = getFixedInputs();
-          data.fixedRaw.slice(0, 4).forEach((v, i) => { inputs[i].value = v; });
+          data.fixedRaw.slice(0, 8).forEach((v, i) => { inputs[i].value = v; });
         }
       }
     } catch (e) { /* ignore */ }
@@ -1155,7 +1190,29 @@
   }
 
   // ---- 公平シャッフル ----
-  function assign() {
+  // ★の人がまとまっていない度合い：各コートで「★の人×★なしの人」の組み合わせ数
+  // （★が4人なら1コートに集めると0、2人＋2人に分かれると8）
+  function starMixCost(groups) {
+    let cost = 0;
+    for (const g of groups) {
+      const k = g.filter(p => starSet.has(starKey(p))).length;
+      cost += k * (g.length - k);
+    }
+    return cost;
+  }
+
+  // starMode=true（★シャッフル）：★の人ができるだけ同じコートにまとまるよう最優先し、
+  // その範囲で「同じ人との再会」「コートの偏り」を減らす
+  function assign(starMode = false) {
+    if (starMode) {
+      const nStar = Array.from({length: A}, (_, i) => i + 1).filter(p => starSet.has(starKey(p))).length;
+      if (nStar === 0) {
+        alert('★がついている人がいません。\nシャッフル後に番号をタップして★をつけてから使ってください。');
+        return;
+      }
+    }
+    const STAR_W = 1000;   // ★のまとまりを再会回数より優先させる重み
+    const groupCost = gs => (starMode ? starMixCost(gs) * STAR_W : 0) + pairCostOfGroups(gs);
     const fixedResters = readFixedResters();
     if (document.querySelector('.fixed-input.invalid')) {
       if (!confirm('お休み指定に無効な番号があります。\n無効な番号を無視してシャッフルしますか？')) return;
@@ -1196,9 +1253,9 @@
           for (let b = a + 1; b < numCourts; b++) {
             for (let x = 0; x < 4; x++) {
               for (let y = 0; y < 4; y++) {
-                const before = pairCostOfGroups([groups[a], groups[b]]);
+                const before = groupCost([groups[a], groups[b]]);
                 [groups[a][x], groups[b][y]] = [groups[b][y], groups[a][x]];
-                const after = pairCostOfGroups([groups[a], groups[b]]);
+                const after = groupCost([groups[a], groups[b]]);
                 if (after < before) {
                   improved = true;
                 } else {
@@ -1210,7 +1267,7 @@
         }
       }
 
-      const pCost = pairCostOfGroups(groups);
+      const pCost = groupCost(groups);
       if (pCost > bestP) continue;
       const { perm, cost: cCost } = bestCourtPermutation(groups);
       if (pCost < bestP || cCost < bestC) {
@@ -1243,7 +1300,7 @@
     saveState();
     updateCourtUI();
 
-    renderCourt(bestCourts || [], resters, bestCost, fixedSet);
+    renderCourt(bestCourts || [], resters, bestCost, fixedSet, starMode);
   }
 
   // コート割りの氏名を、枠に収まる範囲でできるだけ大きく表示
@@ -1271,9 +1328,31 @@
     return nm ? `<div class="bname">${escapeHtml(nm)}</div>` : '';
   }
 
+  // ---- 上級者マーク（★） ----
+  // 氏名ごとに記憶するので、シャッフルしても・番号が変わっても維持される
+  const STAR_KEY = 'pickle_star_v1';
+  let starSet = new Set();
+  try {
+    const d = JSON.parse(localStorage.getItem(STAR_KEY) || '[]');
+    if (Array.isArray(d)) starSet = new Set(d);
+  } catch (e) { /* ignore */ }
+
+  function starKey(n) {
+    const nm = (typeof names !== 'undefined' && names[n - 1]) ? names[n - 1] : '';
+    return nm || ('#' + n);   // 氏名がなければ番号で記憶
+  }
+  function starCls(n) { return starSet.has(starKey(n)) ? ' star' : ''; }
+
+  function toggleStar(n, el) {
+    const k = starKey(n);
+    if (starSet.has(k)) starSet.delete(k); else starSet.add(k);
+    try { localStorage.setItem(STAR_KEY, JSON.stringify([...starSet])); } catch (e) { /* ignore */ }
+    el.classList.toggle('star', starSet.has(k));
+  }
+
   // ---- 表示 ----
-  function renderCourt(courts, resters, cost, fixedSet = new Set()) {
-    let html = `<div class="result-title">▼ 割り当て結果</div>`;
+  function renderCourt(courts, resters, cost, fixedSet = new Set(), starMode = false) {
+    let html = `<div class="result-title">▼ 割り当て結果${starMode ? '（★まとめ）' : ''}</div>`;
 
     if (courts.length === 0) {
       html += `<div class="warn-card">⚠️ 4人揃うコートがありません<br>人数またはコート数を確認してください</div>`;
@@ -1285,7 +1364,7 @@
         <div class="court-card ${c}">
           <div class="court-name"><span>コート</span><span>${idx + 1}</span></div>
           <div class="badges">
-            ${[...court].sort((a, b) => a - b).map(n => `<div class="slot"><div class="badge ${c}">${n}</div>${nameTag(n)}</div>`).join('')}
+            ${[...court].sort((a, b) => a - b).map(n => `<div class="slot"><div class="badge ${c}${starCls(n)}" onclick="toggleStar(${n}, this)">${n}</div>${nameTag(n)}</div>`).join('')}
           </div>
         </div>`;
     });
@@ -1295,7 +1374,7 @@
         <div class="rest-card">
           <div class="rest-name">💤 お休み (${resters.length}人)</div>
           <div class="badges">
-            ${[...resters].sort((a, b) => a - b).map(n => `<div class="slot"><div class="rest-badge${fixedSet.has(n) ? ' fixed' : ''}">${n}</div>${nameTag(n)}</div>`).join('')}
+            ${[...resters].sort((a, b) => a - b).map(n => `<div class="slot"><div class="rest-badge${fixedSet.has(n) ? ' fixed' : ''}${starCls(n)}" onclick="toggleStar(${n}, this)">${n}</div>${nameTag(n)}</div>`).join('')}
           </div>
         </div>`;
     }
@@ -1477,6 +1556,7 @@
 原 千恵珠の父
 原田和彦
 日下部真弓
+福澤憲一
 本道
 前島利彦
 松岡まゆみ
@@ -1487,6 +1567,7 @@
 松本ペリドット
 峯松秀樹
 宮下なをゑ
+毛利宏
 秦百合子
 矢崎ともみ
 山崎孝宏
