@@ -127,6 +127,12 @@
 
     .tool-btn:active { transform: scale(0.96); background: #ECEFF1; }
 
+    /* ---- 参加者リストの読み込み ---- */
+    .load-row { margin: 0 0 6px; }
+    .load-row .tool-btn { font-size: 14px; padding: 9px 4px; }
+    .load-msg { font-size: 12px; font-weight: 700; color: #1565C0; min-height: 1.2em; margin-bottom: 8px; }
+    .load-msg.err { color: #C62828; }
+
     /* ---- 名簿から選ぶ ---- */
     .roster-head {
       display: flex;
@@ -874,6 +880,12 @@
   <div class="input-card" id="inputCard">
     <div class="input-title">✏️ 参加者の氏名</div>
     <div class="input-sub">1行に1人ずつ入力・貼り付け、または下の名簿からタップで選択</div>
+    <div class="btn-row load-row">
+      <button class="tool-btn" onclick="document.getElementById('listFile').click()">📂 ファイルから読込</button>
+      <button class="tool-btn" onclick="loadTodayList()">☁️ 今回の参加者を読込</button>
+    </div>
+    <input id="listFile" type="file" accept=".txt,text/plain" style="display:none" onchange="loadListFile(this)">
+    <div class="load-msg" id="loadMsg"></div>
     <textarea id="names" placeholder="例）&#10;諏訪太郎&#10;岡谷花子&#10;茅野次郎" oninput="syncChips()"></textarea>
     <button class="add-new" id="addNew" onclick="addTypedToRoster()"></button>
 
@@ -1641,6 +1653,74 @@ Yukipゆき
     } catch (e) { /* ignore */ }
   }
 
+  // テキストファイルの中身を文字列にする（UTF-8 / Shift_JIS のどちらでも読める）
+  function decodeText(buf) {
+    let text;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) { text = new TextDecoder('shift_jis').decode(buf); }   // メモ帳などで Shift_JIS 保存された場合
+    return text.replace(/^\uFEFF/, '');
+  }
+
+  // ---- 今回の参加者リストをテキストファイルから読み込む ----
+  function setLoadMsg(msg, isErr) {
+    const el = document.getElementById('loadMsg');
+    el.textContent = msg;
+    el.classList.toggle('err', !!isErr);
+  }
+
+  // 読み込んだ氏名で「参加者の氏名」欄を入れ替える（名簿のチップも選択状態になる）
+  function applyParticipantText(text, label) {
+    const list = uniq(parseNames(text));
+    if (!list.length) { setLoadMsg(`${label} に氏名が見つかりませんでした`, true); return false; }
+    const cur = currentNames();
+    if (cur.length && cur.join('\n') !== list.join('\n') &&
+        !confirm(`現在の参加者（${cur.length}人）を、${label} の ${list.length}人に入れ替えますか？`)) {
+      setLoadMsg('読み込みを取り消しました', false);
+      return false;
+    }
+    document.getElementById('names').value = list.join('\n');
+    syncChips();
+    const notIn = list.filter(n => !roster.includes(n)).length;
+    setLoadMsg(`✓ ${label} から ${list.length}人を読み込みました` + (notIn ? `（うち名簿にない人 ${notIn}人）` : ''), false);
+    return true;
+  }
+
+  // 方法A：端末内のテキストファイルを選んで読み込む（オフラインでも使える）
+  function loadListFile(input) {
+    const file = input.files && input.files[0];
+    input.value = '';   // 同じファイルをもう一度選べるようにする
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => applyParticipantText(decodeText(reader.result), `「${file.name}」`);
+    reader.onerror = () => setLoadMsg('ファイルを読み込めませんでした', true);
+    reader.readAsArrayBuffer(file);
+  }
+
+  // 方法B：このページと同じ場所に置いた today.txt を読み込む（オンラインが必要）
+  async function loadTodayList() {
+    setLoadMsg('today.txt を読み込み中…', false);
+    let res;
+    try {
+      res = await fetch('today.txt?t=' + Date.now(), { cache: 'no-store' });
+    } catch (e) {
+      setLoadMsg('読み込めませんでした（オフラインの可能性があります）', true);
+      return;
+    }
+    if (!res.ok) {
+      setLoadMsg(res.status === 404 ? 'today.txt が見つかりません' : `読み込めませんでした（エラー ${res.status}）`, true);
+      return;
+    }
+    const text = decodeText(await res.arrayBuffer());
+    if (/^\s*</.test(text)) { setLoadMsg('today.txt が見つかりません', true); return; }
+    let label = 'today.txt';
+    const lm = res.headers.get('last-modified');
+    if (lm && !isNaN(Date.parse(lm))) {
+      const d = new Date(lm);
+      label += `（${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')} 更新）`;
+    }
+    applyParticipantText(text, label);
+  }
+
   // roster.txt を読み込み、前回から変わっていれば名簿に反映する
   // （オフライン時や読み込めないときは何もしない＝前回取り込んだ名簿のまま）
   async function refreshRosterFromFile() {
@@ -1648,11 +1728,7 @@ Yukipゆき
     try {
       const res = await fetch('roster.txt', { cache: 'no-cache' });
       if (!res.ok) return;
-      const buf = await res.arrayBuffer();
-      let text;
-      try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
-      catch (e) { text = new TextDecoder('shift_jis').decode(buf); }   // メモ帳などで Shift_JIS 保存された場合
-      text = text.replace(/^\uFEFF/, '');
+      const text = decodeText(await res.arrayBuffer());
       if (/^\s*</.test(text)) return;                 // HTML（エラーページなど）が返ってきた
       const list = uniq(parseNames(text));
       if (!list.length) return;                       // 空の名簿は無視
