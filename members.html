@@ -1484,6 +1484,9 @@
   // ---- 名簿 ----
   const ROSTER_KEY = 'pickle_roster_v1';
   const ROSTER_SEEN_KEY = 'pickle_roster_default_seen_v1';   // この端末が最後に取り込んだ初期名簿
+  const ROSTER_TXT_KEY = 'pickle_roster_txt_v1';             // 最後に取り込んだ roster.txt の中身
+  // 初期名簿は同じフォルダの roster.txt（1行に1人）で管理する。
+  // 下の DEFAULT_ROSTER は、roster.txt をまだ一度も読み込めていないときだけ使う予備。
   const DEFAULT_ROSTER = `
 瀬口賢一
 瀬口ちなみ
@@ -1604,11 +1607,16 @@ Yukipゆき
 池野 妙子
 `;
   let roster = [];
+  let defaultRoster = [];   // 現在の初期名簿（roster.txt の内容。未取得なら予備の DEFAULT_ROSTER）
 
   function uniq(arr) { return [...new Set(arr)]; }
 
   function loadRoster() {
-    const defaults = uniq(parseNames(DEFAULT_ROSTER));
+    let txt = null;
+    try { txt = localStorage.getItem(ROSTER_TXT_KEY); } catch (e) { /* ignore */ }
+    let defaults = txt ? uniq(parseNames(txt)) : [];
+    if (!defaults.length) defaults = uniq(parseNames(DEFAULT_ROSTER));
+    defaultRoster = defaults;
     let saved = null, seen = null;
     try {
       const raw = localStorage.getItem(ROSTER_KEY);
@@ -1631,6 +1639,28 @@ Yukipゆき
       localStorage.setItem(ROSTER_SEEN_KEY, JSON.stringify(defaults));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(roster));
     } catch (e) { /* ignore */ }
+  }
+
+  // roster.txt を読み込み、前回から変わっていれば名簿に反映する
+  // （オフライン時や読み込めないときは何もしない＝前回取り込んだ名簿のまま）
+  async function refreshRosterFromFile() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    try {
+      const res = await fetch('roster.txt', { cache: 'no-cache' });
+      if (!res.ok) return;
+      const buf = await res.arrayBuffer();
+      let text;
+      try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+      catch (e) { text = new TextDecoder('shift_jis').decode(buf); }   // メモ帳などで Shift_JIS 保存された場合
+      text = text.replace(/^\uFEFF/, '');
+      if (/^\s*</.test(text)) return;                 // HTML（エラーページなど）が返ってきた
+      const list = uniq(parseNames(text));
+      if (!list.length) return;                       // 空の名簿は無視
+      try { localStorage.setItem(ROSTER_TXT_KEY, text); } catch (e) { /* ignore */ }
+      if (list.join('\n') === defaultRoster.join('\n')) return;   // 変更なし
+      loadRoster();
+      renderChips();
+    } catch (e) { /* オフラインなど */ }
   }
 
   function saveRoster() {
@@ -1711,7 +1741,7 @@ Yukipゆき
 
   function resetRoster() {
     if (!confirm('名簿を最初の状態（初期登録の氏名）に戻しますか？\n追加・編集した内容は消えます。')) return;
-    roster = uniq(parseNames(DEFAULT_ROSTER));
+    roster = defaultRoster.slice();
     saveRoster();
     document.getElementById('rosterText').value = roster.join('\n');
     renderChips();
@@ -1981,6 +2011,7 @@ Yukipゆき
     showList();
   }
   renderChips();
+  refreshRosterFromFile();   // roster.txt の更新を確認（オンライン時のみ）
 </script>
 <script>
   // ---- オフライン対応（PWA） ----

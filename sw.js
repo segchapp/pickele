@@ -6,9 +6,10 @@
 // ・ここに挙げたファイル以外（同じサイトの他のページ）には一切手を出さない
 //
 // ASSETS のファイルを増減したときは CACHE の番号を上げること（v1 → v2）。
-const CACHE = 'pickle-members-v1';
+const CACHE = 'pickle-members-v2';
 const ASSETS = [
   'members.html',
+  'roster.txt',
   'manifest.json',
   'icon-192.png',
   'icon-512.png',
